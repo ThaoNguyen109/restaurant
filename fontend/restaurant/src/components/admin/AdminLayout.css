@@ -1,0 +1,405 @@
+/* ==========================================
+   LOTUS ADMIN LAYOUT - MODERN LUXURY DESIGN
+   Palette:
+   - Primary Green: #2a4736 (Lá sen đậm)
+   - Accent Pink: #d86888 (Cánh sen)
+   - Neutral Light: #f8faf9
+   ========================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #f8faf9;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  color: #1e3527;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ------------------------------------------
+   1. SIDEBAR
+   ------------------------------------------ */
+.admin-layout__sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 270px;
+  height: 100vh;
+  background: #1e3327;
+  color: #f0f4f1;
+  padding: 32px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Brand */
+.admin-layout__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 28px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-layout__brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #d86888 0%, #b84e6e 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.5px;
+  box-shadow: 0 4px 12px rgba(216, 104, 136, 0.25);
+}
+
+.admin-layout__brand h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.admin-layout__brand p {
+  margin: 3px 0 0;
+  color: #8fa897;
+  font-size: 0.73rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Navigation */
+.admin-layout__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.admin-layout__nav button {
+  border: none;
+  background: transparent;
+  color: #a3b8aa;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.01em;
+}
+
+.nav-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.admin-layout__nav button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.admin-layout__nav button:hover .nav-bullet {
+  background-color: #d86888;
+  transform: scale(1.4);
+}
+
+.admin-layout__nav button.active {
+  background: rgba(216, 104, 136, 0.12);
+  color: #f7a8be;
+  font-weight: 600;
+}
+
+.admin-layout__nav button.active .nav-bullet {
+  background-color: #d86888;
+  transform: scale(1.4);
+  box-shadow: 0 0 8px rgba(216, 104, 136, 0.6);
+}
+
+/* Footer Sidebar */
+.admin-layout__footer {
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shift-label {
+  color: #8fa897;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.shift-time {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------
+   2. MAIN WRAPPER
+   ------------------------------------------ */
+.admin-layout__wrapper {
+  margin-left: 270px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Topbar */
+.admin-layout__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 40px;
+  background: rgba(248, 250, 249, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(42, 71, 54, 0.06);
+}
+
+/* System Status Bar (Thay thế cho thanh Tìm kiếm) */
+.admin-layout__status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(42, 71, 54, 0.04);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(42, 71, 54, 0.06);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.status-dot.online {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.status-label {
+  color: #6c7e72;
+}
+
+.status-value {
+  color: #1e3527;
+  font-weight: 600;
+}
+
+.status-divider {
+  width: 1px;
+  height: 12px;
+  background-color: rgba(42, 71, 54, 0.15);
+}
+
+/* Topbar Right Controls */
+.admin-layout__topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Nút Chuông Thông báo */
+/* Nút Chuông Thông báo */
+.notification-btn {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(42, 71, 54, 0.12);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2a4736;
+  transition: all 0.2s ease;
+  padding: 0; /* Xóa padding mặc định */
+}
+
+.notification-btn:hover {
+  background: #2a4736;
+  color: #ffffff;
+  border-color: #2a4736;
+}
+
+.bell-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.notification-btn:hover .bell-icon {
+  transform: rotate(12deg);
+}
+
+/* Badge đếm số lượng */
+.notification-btn .badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: #d86888;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff; /* Viền trắng tách biệt với khung tròn */
+  line-height: 1;
+}
+
+/* User Profile */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(42, 71, 54, 0.12);
+}
+
+.user-profile .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2a4736;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info .name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e3527;
+  line-height: 1.2;
+}
+
+.user-info .role {
+  font-size: 0.73rem;
+  color: #6c7e72;
+  margin-top: 2px;
+}
+
+/* Main Area */
+.admin-layout__main {
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.admin-layout__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.admin-layout__title .subtitle {
+  margin: 0 0 6px;
+  color: #d86888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+}
+
+.admin-layout__title h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #122218;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.admin-layout__content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .admin-layout__sidebar {
+    width: 80px;
+    padding: 24px 12px;
+  }
+
+  .admin-layout__brand-text,
+  .admin-layout__nav button span:not(.nav-bullet),
+  .admin-layout__footer,
+  .admin-layout__status-bar {
+    display: none;
+  }
+
+  .admin-layout__wrapper {
+    margin-left: 80px;
+  }
+
+  .admin-layout__nav button {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .admin-layout__topbar,
+  .admin-layout__main {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}

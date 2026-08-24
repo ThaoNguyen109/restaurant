@@ -1,0 +1,312 @@
+/* ==========================================
+   ADMIN PAGES - Common Styles
+   Tables, Forms, Cards, etc.
+   ========================================== */
+
+/* --- TABLES --- */
+.table-card {
+  background: #ffffff;
+  padding: 22px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(42, 71, 54, 0.08);
+  box-shadow: 0 4px 16px rgba(42, 71, 54, 0.03);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.data-table th {
+  padding: 12px 14px;
+  color: #6a7e71;
+  font-weight: 600;
+  border-bottom: 2px solid #f0f4f1;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.data-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f4f6f3;
+  color: #2c3e33;
+}
+
+.data-table tr:hover {
+  background: #f9fbfa;
+}
+
+.order-id {
+  font-weight: 600;
+  color: #d86888;
+}
+
+.order-total {
+  font-weight: 600;
+}
+
+.price {
+  font-weight: 600;
+  color: #2a4736;
+}
+
+/* --- STATUS BADGES --- */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-completed {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-preparing {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.status-delivering {
+  background: #fce4ec;
+  color: #d86888;
+}
+
+.status-active {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-available {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-unavailable {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-low {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.status-ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* --- ACTION BUTTONS --- */
+.action-btn {
+  background: linear-gradient(135deg, #d86888 0%, #c45373 100%);
+  color: #ffffff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-right: 4px;
+}
+
+.action-btn:hover {
+  opacity: 0.9;
+}
+
+.action-btn.danger {
+  background: #ef5350;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #2a4736 0%, #1e3527 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+/* --- REPORTS --- */
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.report-card {
+  background: #ffffff;
+  padding: 22px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(42, 71, 54, 0.08);
+  box-shadow: 0 4px 16px rgba(42, 71, 54, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1e3527;
+  font-weight: 700;
+}
+
+.report-card p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.report-card .primary-btn {
+  align-self: flex-start;
+}
+
+/* --- SETTINGS --- */
+.settings-container {
+  display: grid;
+  gap: 20px;
+}
+
+.settings-section {
+  background: #ffffff;
+  padding: 22px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(42, 71, 54, 0.08);
+  box-shadow: 0 4px 16px rgba(42, 71, 54, 0.03);
+}
+
+.settings-section h3 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+  color: #1e3527;
+  font-weight: 700;
+}
+
+.settings-section p {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.settings-section.danger {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e3527;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid rgba(42, 71, 54, 0.12);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #1e3527;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #d86888;
+  box-shadow: 0 0 0 3px rgba(216, 104, 136, 0.1);
+}
+
+.form-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group.checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.form-group.checkbox label {
+  margin: 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* --- DANGER BUTTON --- */
+.danger-btn {
+  background: #ef5350;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.danger-btn:hover {
+  opacity: 0.9;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 1024px) {
+  .report-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+  }
+
+  .data-table td,
+  .data-table th {
+    padding: 10px 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-card {
+    overflow-x: auto;
+  }
+
+  .action-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
