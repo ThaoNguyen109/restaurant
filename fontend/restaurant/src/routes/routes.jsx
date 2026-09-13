@@ -7,16 +7,24 @@ import InventoryPage from '../pages/admin/InventoryPage'
 import MenuPage from '../pages/admin/MenuPage'
 import ReportsPage from '../pages/admin/ReportsPage'
 import SettingsPage from '../pages/admin/SettingsPage'
+import TablesPage from '../pages/admin/TablesPage'
+import ReservationsPage from '../pages/admin/ReservationsPage'
 import ManagerDashboard from '../pages/manager/ManagerDashboard'
 import StaffDashboard from '../pages/staff/StaffDashboard'
+import KitchenPage from '../pages/staff/KitchenPage'
+import CashierPage from '../pages/staff/CashierPage'
 import CustomerPage from '../pages/customer/CustomerPage'
 import CustomerMenuPage from '../pages/customer/CustomerMenuPage'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 export const router = createBrowserRouter([
+  // ── Trang đăng nhập (public) ──────────────────────────────────────
   {
     path: '/',
     element: <Login />,
   },
+
+  // ── Trang khách hàng (public – không cần đăng nhập) ──────────────
   {
     path: '/menu',
     element: <CustomerMenuPage />,
@@ -26,43 +34,145 @@ export const router = createBrowserRouter([
     element: <CustomerMenuPage />,
   },
   {
+    path: '/customer',
+    element: <CustomerPage />,
+  },
+
+  // ── Admin (chỉ ADMIN) ─────────────────────────────────────────────
+  {
     path: '/admin',
-    element: <AdminDashboard />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <AdminDashboard />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/employees',
-    element: <EmployeesPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <EmployeesPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/orders',
-    element: <OrdersPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <OrdersPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/inventory',
-    element: <InventoryPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <InventoryPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/menu',
-    element: <MenuPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <MenuPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/tables',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <TablesPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/reservations',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ReservationsPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/reports',
-    element: <ReportsPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ReportsPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/admin/settings',
-    element: <SettingsPage />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <SettingsPage />
+      </ProtectedRoute>
+    ),
   },
+
+  // ── Manager (ADMIN + MANAGER) ─────────────────────────────────────
   {
     path: '/manager',
-    element: <ManagerDashboard />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+        <ManagerDashboard />
+      </ProtectedRoute>
+    ),
   },
+
+  // ── Nhân viên phục vụ (ADMIN + MANAGER + WAITER + STAFF) ─────────
   {
     path: '/staff',
-    element: <StaffDashboard />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF']}>
+        <StaffDashboard />
+      </ProtectedRoute>
+    ),
   },
   {
-    path: '/customer',
-    element: <CustomerPage />,
+    path: '/waiter',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF']}>
+        <StaffDashboard />
+      </ProtectedRoute>
+    ),
+  },
+
+  // ── Bếp (ADMIN + MANAGER + KITCHEN + CHEF) ─────────────────────
+  {
+    path: '/kitchen',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'KITCHEN', 'CHEF']}>
+        <KitchenPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/staff/kitchen',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'KITCHEN', 'CHEF']}>
+        <KitchenPage />
+      </ProtectedRoute>
+    ),
+  },
+
+  // ── Thu ngân (ADMIN + MANAGER + CASHIER) ─────────────────────────
+  {
+    path: '/cashier',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CASHIER']}>
+        <CashierPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/staff/cashier',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CASHIER']}>
+        <CashierPage />
+      </ProtectedRoute>
+    ),
   },
 ])

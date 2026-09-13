@@ -5,31 +5,39 @@ import {
   getAllMenuItems,
   createMenuItem,
   updateMenuItem,
-  deleteMenuItem,
   updateMenuItemStatus,
 } from '../../services/menuItemService'
 import {
   getAllCategories,
   createCategory,
   updateCategory,
-  deleteCategory,
 } from '../../services/categoryService'
+import {
+  getAllCombos,
+  createCombo,
+  updateCombo,
+} from '../../services/comboService'
 import { getImageFullUrl } from '../../services/apiClient'
 
 function MenuPage() {
-  // viewMode: 'list' (danh sách) | 'item-form' (form thêm/sửa món ăn) | 'category-form' (form thêm/sửa danh mục)
+  // viewMode: 'list' (danh sách) | 'item-form' (form món) | 'category-form' (form danh mục) | 'combo-form' (form combo)
   const [viewMode, setViewMode] = useState('list')
-  const [activeTab, setActiveTab] = useState('items') // 'items' | 'categories'
+  const [activeTab, setActiveTab] = useState('items') // 'items' | 'categories' | 'combos'
 
   // Dữ liệu
   const [menuItems, setMenuItems] = useState([])
   const [categories, setCategories] = useState([])
+  const [combos, setCombos] = useState([])
   const [loading, setLoading] = useState(false)
 
-  // Bộ lọc
+  // Bộ lọc Món ăn
   const [filterCategory, setFilterCategory] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
+
+  // Bộ lọc Combo
+  const [filterComboStatus, setFilterComboStatus] = useState('')
+  const [searchComboKeyword, setSearchComboKeyword] = useState('')
 
   // Toast thông báo
   const [toast, setToast] = useState(null)
@@ -57,29 +65,54 @@ function MenuPage() {
     status: 'ACTIVE',
   })
 
-  // Modal Xác nhận Xóa
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState(null) // { type: 'item' | 'category', id, name }
+  // State Form Combo & Combo Items
+  const [editingCombo, setEditingCombo] = useState(null)
+  const [comboFormData, setComboFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    status: 'ACTIVE',
+  })
+  const [comboSelectedFile, setComboSelectedFile] = useState(null)
+  const [comboImagePreview, setComboImagePreview] = useState(null)
+  const [selectedComboItems, setSelectedComboItems] = useState([]) // [{ menuItemId, quantity, menuItemName, menuItemPrice, menuItemImage }]
+  const [addMenuItemId, setAddMenuItemId] = useState('')
+  const [addMenuItemQty, setAddMenuItemQty] = useState(1)
+  const comboFileInputRef = useRef(null)
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3500)
   }
 
-  // Tải dữ liệu từ API
+  // Tải dữ liệu từ API (Tải toàn bộ gồm cả ACTIVE và INACTIVE)
   const loadData = async () => {
     try {
       setLoading(true)
-      const [cats, items] = await Promise.all([
+      const [catsResult, itemsResult, comboResult] = await Promise.allSettled([
         getAllCategories(),
         getAllMenuItems({
           categoryId: filterCategory || undefined,
           status: filterStatus || undefined,
           search: searchKeyword || undefined,
         }),
+        getAllCombos(),
       ])
-      setCategories(cats)
-      setMenuItems(items)
+
+      if (catsResult.status === 'fulfilled') {
+        setCategories(Array.isArray(catsResult.value) ? catsResult.value : [])
+      }
+      if (itemsResult.status === 'fulfilled') {
+        setMenuItems(Array.isArray(itemsResult.value) ? itemsResult.value : [])
+      }
+      if (comboResult.status === 'fulfilled') {
+        setCombos(Array.isArray(comboResult.value) ? comboResult.value : [])
+      }
+
+      if (catsResult.status === 'rejected' && itemsResult.status === 'rejected') {
+        const err = catsResult.reason || itemsResult.reason
+        showToast(err?.message || 'Lỗi khi tải dữ liệu từ máy chủ', 'error')
+      }
     } catch (err) {
       showToast(err.message || 'Lỗi khi tải dữ liệu từ máy chủ', 'error')
     } finally {
@@ -93,7 +126,7 @@ function MenuPage() {
     }
   }, [viewMode, filterCategory, filterStatus, searchKeyword])
 
-  // --- XỬ LÝ CHUYỂN SANG FORM MÓN ĂN ---
+  // --- XỬ LÝ FORM MÓN ĂN ---
 
   const handleOpenCreateItem = () => {
     setEditingItem(null)
@@ -200,7 +233,7 @@ function MenuPage() {
   const handleQuickStatusChange = async (itemId, newStatus) => {
     try {
       await updateMenuItemStatus(itemId, newStatus)
-      showToast('Đã cập nhật trạng thái hiển thị món ăn!')
+      showToast('Đã cập nhật trạng thái món ăn!')
       setMenuItems((prev) =>
         prev.map((item) => (item.id === itemId ? { ...item, status: newStatus } : item))
       )
@@ -250,6 +283,7 @@ function MenuPage() {
       }
 
       setViewMode('list')
+      setActiveTab('categories')
       loadData()
     } catch (err) {
       showToast(err.message || 'Lỗi khi lưu danh mục', 'error')
@@ -258,27 +292,205 @@ function MenuPage() {
     }
   }
 
-  // --- XỬ LÝ XÓA ---
+  const handleQuickCategoryStatusChange = async (cat, newStatus) => {
+    try {
+      await updateCategory(cat.id, {
+        name: cat.name,
+        description: cat.description,
+        status: newStatus,
+      })
+      showToast('Đã cập nhật trạng thái danh mục!')
+      setCategories((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, status: newStatus } : c))
+      )
+    } catch (err) {
+      showToast(err.message || 'Không thể đổi trạng thái danh mục', 'error')
+    }
+  }
 
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return
+  // --- XỬ LÝ FORM COMBO & MÓN ĂN TRONG COMBO ---
+
+  const handleOpenCreateCombo = () => {
+    setEditingCombo(null)
+    setComboFormData({
+      name: '',
+      price: '',
+      description: '',
+      status: 'ACTIVE',
+    })
+    setComboSelectedFile(null)
+    setComboImagePreview(null)
+    setSelectedComboItems([])
+    setAddMenuItemId('')
+    setAddMenuItemQty(1)
+    setViewMode('combo-form')
+  }
+
+  const handleOpenEditCombo = (combo) => {
+    setEditingCombo(combo)
+    setComboFormData({
+      name: combo.name || '',
+      price: combo.price || '',
+      description: combo.description || '',
+      status: combo.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    })
+    setComboSelectedFile(null)
+    setComboImagePreview(combo.image ? getImageFullUrl(combo.image) : null)
+
+    // Map combo items
+    const existingItems = (combo.items || []).map((i) => ({
+      menuItemId: i.menuItemId,
+      quantity: i.quantity || 1,
+      menuItemName: i.menuItemName,
+      menuItemPrice: i.menuItemPrice,
+      menuItemImage: i.menuItemImage,
+    }))
+    setSelectedComboItems(existingItems)
+    setAddMenuItemId('')
+    setAddMenuItemQty(1)
+    setViewMode('combo-form')
+  }
+
+  const handleAddDishToCombo = () => {
+    if (!addMenuItemId) {
+      showToast('Vui lòng chọn món ăn cần thêm vào combo', 'error')
+      return
+    }
+
+    const dish = menuItems.find((m) => String(m.id) === String(addMenuItemId))
+    if (!dish) return
+
+    setSelectedComboItems((prev) => {
+      const idx = prev.findIndex((i) => String(i.menuItemId) === String(dish.id))
+      if (idx >= 0) {
+        const updated = [...prev]
+        updated[idx].quantity += Number(addMenuItemQty)
+        return updated
+      } else {
+        return [
+          ...prev,
+          {
+            menuItemId: dish.id,
+            quantity: Number(addMenuItemQty),
+            menuItemName: dish.name,
+            menuItemPrice: dish.price,
+            menuItemImage: dish.image,
+          },
+        ]
+      }
+    })
+
+    setAddMenuItemId('')
+    setAddMenuItemQty(1)
+    showToast(`Đã thêm món "${dish.name}" vào danh sách combo`)
+  }
+
+  const handleUpdateComboItemQty = (index, delta) => {
+    setSelectedComboItems((prev) => {
+      const updated = [...prev]
+      const newQty = updated[index].quantity + delta
+      if (newQty <= 0) {
+        updated.splice(index, 1)
+      } else {
+        updated[index].quantity = newQty
+      }
+      return updated
+    })
+  }
+
+  const handleRemoveDishFromCombo = (index) => {
+    setSelectedComboItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleComboFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg']
+      if (!validTypes.includes(file.type)) {
+        showToast('Vui lòng chọn định dạng ảnh hợp lệ (.jpg, .png, .webp, .gif)', 'error')
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('Dung lượng file ảnh không được vượt quá 10MB', 'error')
+        return
+      }
+      setComboSelectedFile(file)
+      setComboImagePreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleRemoveComboImage = () => {
+    setComboSelectedFile(null)
+    setComboImagePreview(null)
+    if (comboFileInputRef.current) {
+      comboFileInputRef.current.value = ''
+    }
+  }
+
+  const handleSaveCombo = async (e) => {
+    e.preventDefault()
+
+    if (!comboFormData.name.trim()) {
+      showToast('Vui lòng nhập tên combo', 'error')
+      return
+    }
+    if (!comboFormData.price || Number(comboFormData.price) <= 0) {
+      showToast('Giá bán combo phải lớn hơn 0', 'error')
+      return
+    }
 
     try {
       setFormSubmitting(true)
-      if (deleteTarget.type === 'item') {
-        await deleteMenuItem(deleteTarget.id)
-        showToast(`Đã xóa món "${deleteTarget.name}"`)
-      } else if (deleteTarget.type === 'category') {
-        await deleteCategory(deleteTarget.id)
-        showToast(`Đã xóa danh mục "${deleteTarget.name}"`)
+      const formData = new FormData()
+      formData.append('name', comboFormData.name.trim())
+      formData.append('price', comboFormData.price)
+      formData.append('description', comboFormData.description || '')
+      formData.append('status', comboFormData.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE')
+
+      if (comboSelectedFile) {
+        formData.append('image', comboSelectedFile)
       }
-      setDeleteModalOpen(false)
-      setDeleteTarget(null)
+
+      // Đưa danh sách combo items vào form
+      const itemsPayload = selectedComboItems.map((item) => ({
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+      }))
+      formData.append('itemsJson', JSON.stringify(itemsPayload))
+
+      if (editingCombo) {
+        await updateCombo(editingCombo.id, formData)
+        showToast(`Cập nhật combo "${comboFormData.name}" thành công!`)
+      } else {
+        await createCombo(formData)
+        showToast(`Thêm combo "${comboFormData.name}" thành công!`)
+      }
+
+      setViewMode('list')
+      setActiveTab('combos')
       loadData()
     } catch (err) {
-      showToast(err.message || 'Lỗi khi thực hiện xóa', 'error')
+      showToast(err.message || 'Lỗi khi lưu combo', 'error')
     } finally {
       setFormSubmitting(false)
+    }
+  }
+
+  const handleQuickComboStatusChange = async (combo, newStatus) => {
+    try {
+      const formData = new FormData()
+      formData.append('name', combo.name)
+      formData.append('price', combo.price)
+      formData.append('description', combo.description || '')
+      formData.append('status', newStatus)
+
+      await updateCombo(combo.id, formData)
+      showToast('Đã cập nhật trạng thái combo!')
+      setCombos((prev) =>
+        prev.map((c) => (c.id === combo.id ? { ...c, status: newStatus } : c))
+      )
+    } catch (err) {
+      showToast(err.message || 'Không thể đổi trạng thái combo', 'error')
     }
   }
 
@@ -287,10 +499,31 @@ function MenuPage() {
     return Number(val).toLocaleString('vi-VN') + ' ₫'
   }
 
+  // Tính tổng giá tiền gốc các món trong combo
+  const totalOriginalDishPrice = selectedComboItems.reduce(
+    (sum, item) => sum + (item.menuItemPrice || 0) * item.quantity,
+    0
+  )
+  const savingsAmount = totalOriginalDishPrice - (Number(comboFormData.price) || 0)
+
+  // Thống kê
   const totalItems = menuItems.length
   const activeCount = menuItems.filter((i) => i.status === 'ACTIVE' || !i.status).length
-  const inactiveCount = menuItems.filter((i) => i.status === 'INACTIVE').length
   const totalCategories = categories.length
+  const totalCombos = combos.length
+  const activeCombosCount = combos.filter((c) => c.status === 'ACTIVE' || !c.status).length
+
+  // Lọc danh sách combo ở giao diện
+  const filteredCombos = combos.filter((c) => {
+    const matchStatus =
+      !filterComboStatus ||
+      (filterComboStatus === 'ACTIVE' ? c.status !== 'INACTIVE' : c.status === 'INACTIVE')
+    const matchSearch =
+      !searchComboKeyword ||
+      c.name.toLowerCase().includes(searchComboKeyword.toLowerCase()) ||
+      (c.description && c.description.toLowerCase().includes(searchComboKeyword.toLowerCase()))
+    return matchStatus && matchSearch
+  })
 
   const selectedCategoryObj = categories.find((c) => String(c.id) === String(itemFormData.categoryId))
 
@@ -302,10 +535,14 @@ function MenuPage() {
             ? 'Chỉnh sửa món ăn'
             : 'Thêm món ăn mới'
           : viewMode === 'category-form'
-          ? editingCategory
-            ? 'Chỉnh sửa danh mục'
-            : 'Thêm danh mục mới'
-          : 'Quản lý thực đơn & danh mục'
+            ? editingCategory
+              ? 'Chỉnh sửa danh mục'
+              : 'Thêm danh mục mới'
+            : viewMode === 'combo-form'
+              ? editingCombo
+                ? 'Chỉnh sửa Combo'
+                : 'Thêm Combo mới'
+              : 'Quản lý thực đơn & danh mục'
       }
       subtitle="Thực đơn"
       actions={
@@ -314,9 +551,13 @@ function MenuPage() {
             <button className="btn-primary-large" onClick={handleOpenCreateItem}>
               + Thêm món ăn mới
             </button>
-          ) : (
+          ) : activeTab === 'categories' ? (
             <button className="btn-primary-large" onClick={handleOpenCreateCategory}>
               + Thêm danh mục mới
+            </button>
+          ) : (
+            <button className="btn-primary-large" onClick={handleOpenCreateCombo}>
+              + Thêm combo mới
             </button>
           )
         ) : (
@@ -328,7 +569,7 @@ function MenuPage() {
     >
       <div className="menu-mgmt-container">
         {/* ========================================================
-            VIEW 1: FORM THÊM / SỬA MÓN ĂN (GIAO DIỆN RỘNG RÃI, TO RÕ)
+            VIEW 1: FORM THÊM / SỬA MÓN ĂN
             ======================================================== */}
         {viewMode === 'item-form' && (
           <div className="form-page-card">
@@ -498,7 +739,7 @@ function MenuPage() {
                     )}
                   </div>
 
-                  {/* KHUNG XEM TRƯỚC GIAO DIỆN (LIVE PREVIEW) */}
+                  {/* LIVE PREVIEW */}
                   <div className="form-section-box">
                     <h4 className="form-section-title">👁️ Xem trước hiển thị trên Menu</h4>
                     <div className="live-preview-box">
@@ -533,7 +774,6 @@ function MenuPage() {
                 </div>
               </div>
 
-              {/* NÚT THỰC HIỆN HÀNH ĐỘNG RÕ RÀNG Ở ĐÁY FORM */}
               <div className="form-page-footer">
                 <button
                   type="button"
@@ -641,7 +881,355 @@ function MenuPage() {
         )}
 
         {/* ========================================================
-            VIEW 3: DANH SÁCH MÓN ĂN & DANH MỤC (LIST VIEW)
+            VIEW 3: FORM THÊM / SỬA COMBO (VỚI QUẢN LÝ COMBO ITEMS)
+            ======================================================== */}
+        {viewMode === 'combo-form' && (
+          <div className="form-page-card">
+            <div className="form-page-header">
+              <div className="form-page-header-title">
+                <h2>{editingCombo ? '✏️ Chỉnh sửa thông tin Combo' : '🍱 Tạo Combo mới'}</h2>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setViewMode('list')}
+                disabled={formSubmitting}
+              >
+                ← Quay lại danh sách
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCombo}>
+              <div className="form-page-layout">
+                {/* CỘT TRÁI: THÔNG TIN CHI TIẾT & CHỌN MÓN VÀO COMBO */}
+                <div className="form-column-main">
+                  <div className="form-section-box">
+                    <h4 className="form-section-title">📝 Thông tin cơ bản</h4>
+
+                    <div className="form-group-large">
+                      <label>Tên Combo <span style={{ color: '#ef5350' }}>*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: Combo Gia Đình Hạnh Phúc 4 Người"
+                        value={comboFormData.name}
+                        onChange={(e) => setComboFormData({ ...comboFormData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      <div className="form-group-large">
+                        <label>Giá Combo (VNĐ) <span style={{ color: '#ef5350' }}>*</span></label>
+                        <input
+                          type="number"
+                          placeholder="Ví dụ: 499000"
+                          min="1000"
+                          step="1000"
+                          value={comboFormData.price}
+                          onChange={(e) =>
+                            setComboFormData({ ...comboFormData, price: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group-large">
+                        <label>Trạng thái hiển thị</label>
+                        <select
+                          value={comboFormData.status}
+                          onChange={(e) => setComboFormData({ ...comboFormData, status: e.target.value })}
+                        >
+                          <option value="ACTIVE">🟢 Hiển thị</option>
+                          <option value="INACTIVE">⚪ Ẩn</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QUẢN LÝ CÁC MÓN ĂN TRONG COMBO (COMBO ITEMS) */}
+                  <div className="form-section-box">
+                    <h4 className="form-section-title">🍱 Danh sách món ăn trong Combo</h4>
+
+                    <div className="combo-items-builder">
+                      <div className="combo-item-add-row">
+                        <select
+                          value={addMenuItemId}
+                          onChange={(e) => setAddMenuItemId(e.target.value)}
+                        >
+                          <option value="">-- Chọn món ăn để thêm vào Combo --</option>
+                          {menuItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} ({formatCurrency(item.price)})
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="qty-input-box">
+                          <button
+                            type="button"
+                            className="qty-btn"
+                            onClick={() => setAddMenuItemQty((q) => Math.max(1, q - 1))}
+                          >
+                            -
+                          </button>
+                          <span className="qty-val">{addMenuItemQty}</span>
+                          <button
+                            type="button"
+                            className="qty-btn"
+                            onClick={() => setAddMenuItemQty((q) => q + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ background: '#2a4736', color: '#ffffff' }}
+                          onClick={handleAddDishToCombo}
+                        >
+                          + Thêm vào Combo
+                        </button>
+                      </div>
+
+                      {/* BẢNG CÁC MÓN ĐÃ CHỌN TRONG COMBO */}
+                      {selectedComboItems.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '16px', color: '#8b9c91', fontSize: '0.88rem' }}>
+                          💡 Chưa có món ăn nào được chọn. Hãy chọn món ở trên để đưa vào Combo!
+                        </div>
+                      ) : (
+                        <>
+                          <table className="combo-selected-items-table">
+                            <thead>
+                              <tr>
+                                <th>Tên món ăn</th>
+                                <th>Đơn giá gốc</th>
+                                <th style={{ textAlign: 'center' }}>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th style={{ textAlign: 'right' }}>Thao tác</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedComboItems.map((item, idx) => (
+                                <tr key={idx}>
+                                  <td>
+                                    <strong style={{ color: '#1e3527' }}>{item.menuItemName}</strong>
+                                  </td>
+                                  <td style={{ color: '#6a7e71' }}>{formatCurrency(item.menuItemPrice)}</td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <div className="qty-input-box" style={{ display: 'inline-flex' }}>
+                                      <button
+                                        type="button"
+                                        className="qty-btn"
+                                        style={{ width: 28, height: 28 }}
+                                        onClick={() => handleUpdateComboItemQty(idx, -1)}
+                                      >
+                                        -
+                                      </button>
+                                      <span className="qty-val" style={{ width: 30, fontSize: '0.85rem' }}>
+                                        {item.quantity}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="qty-btn"
+                                        style={{ width: 28, height: 28 }}
+                                        onClick={() => handleUpdateComboItemQty(idx, 1)}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td style={{ fontWeight: 700, color: '#1e3527' }}>
+                                    {formatCurrency((item.menuItemPrice || 0) * item.quantity)}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    <button
+                                      type="button"
+                                      className="action-btn danger"
+                                      style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                                      onClick={() => handleRemoveDishFromCombo(idx)}
+                                    >
+                                      ✕ Bỏ món
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+
+                          {/* SO SÁNH GIÁ & SỐ TIỀN TIẾT KIỆM */}
+                          <div className="combo-price-compare-box">
+                            <div>
+                              <span>Tổng giá gốc các món: </span>
+                              <strong style={{ textDecoration: 'line-through', color: '#8d6e63' }}>
+                                {formatCurrency(totalOriginalDishPrice)}
+                              </strong>
+                            </div>
+                            <div>
+                              {savingsAmount > 0 ? (
+                                <span style={{ color: '#2e7d32', fontWeight: 700 }}>
+                                  🎉 Tiết kiệm cho khách hàng: {formatCurrency(savingsAmount)}
+                                </span>
+                              ) : (
+                                <span style={{ color: '#ef6c00' }}>
+                                  Giá bán Combo: {formatCurrency(comboFormData.price)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-section-box">
+                    <h4 className="form-section-title">📝 Ghi chú & Mô tả khác</h4>
+
+                    <div className="form-group-large">
+                      <label>Mô tả bổ sung (Khẩu phần, lưu ý phục vụ, ưu đãi đi kèm...)</label>
+                      <textarea
+                        rows="3"
+                        placeholder="Mô tả thêm lưu ý phục vụ hoặc quà tặng đính kèm nếu có..."
+                        value={comboFormData.description}
+                        onChange={(e) =>
+                          setComboFormData({ ...comboFormData, description: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* CỘT PHẢI: UPLOAD HÌNH ẢNH & XEM TRƯỚC COMBO */}
+                <div className="form-column-side">
+                  <div className="form-section-box">
+                    <h4 className="form-section-title">📷 Hình ảnh Combo</h4>
+
+                    <input
+                      type="file"
+                      ref={comboFileInputRef}
+                      accept="image/png, image/jpeg, image/webp, image/gif"
+                      style={{ display: 'none' }}
+                      onChange={handleComboFileChange}
+                    />
+
+                    {comboImagePreview ? (
+                      <div className="image-preview-card-large">
+                        <img src={comboImagePreview} alt="Xem trước ảnh combo" />
+                        <div className="preview-overlay-actions">
+                          <button
+                            type="button"
+                            className="overlay-btn"
+                            onClick={() => comboFileInputRef.current?.click()}
+                          >
+                            🔄 Đổi ảnh khác
+                          </button>
+                          <button
+                            type="button"
+                            className="overlay-btn danger"
+                            onClick={handleRemoveComboImage}
+                          >
+                            ✕ Xóa ảnh
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="image-upload-dropzone-large"
+                        onClick={() => comboFileInputRef.current?.click()}
+                      >
+                        <span className="dropzone-icon-large">🍱</span>
+                        <span className="dropzone-text-large">Chọn hình ảnh cho Combo</span>
+                        <span className="dropzone-subtext-large">
+                          Hỗ trợ định dạng JPG, PNG, WEBP (Dung lượng tối đa 10MB)
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ marginTop: 8 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            comboFileInputRef.current?.click()
+                          }}
+                        >
+                          📂 Duyệt file trên máy
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* LIVE PREVIEW COMBO */}
+                  <div className="form-section-box">
+                    <h4 className="form-section-title">👁️ Xem trước hiển thị Combo</h4>
+                    <div className="live-preview-box" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                        {comboImagePreview ? (
+                          <img src={comboImagePreview} alt="Preview Combo" className="live-preview-img" />
+                        ) : (
+                          <div
+                            className="live-preview-img"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.8rem',
+                            }}
+                          >
+                            🍱
+                          </div>
+                        )}
+                        <div className="live-preview-info">
+                          <span className="live-preview-title">
+                            {comboFormData.name || 'Tên Combo'}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: '#ef6c00', fontWeight: 600 }}>
+                            🔥 COMBO TIẾT KIỆM ({selectedComboItems.length} món)
+                          </span>
+                          <span className="live-preview-price">
+                            {comboFormData.price ? formatCurrency(comboFormData.price) : '0 ₫'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* HIỂN THỊ CÁC MÓN ĂN ĐÃ CHỌN TRONG PREVIEW */}
+                      {selectedComboItems.length > 0 && (
+                        <div className="combo-dishes-tags" style={{ marginTop: 10, borderTop: '1px solid #edf2ee', paddingTop: 10 }}>
+                          {selectedComboItems.map((item, i) => (
+                            <span key={i} className="dish-pill-badge">
+                              <span className="qty">{item.quantity}x</span> {item.menuItemName}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-page-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setViewMode('list')}
+                  disabled={formSubmitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button type="submit" className="btn-primary-large" disabled={formSubmitting}>
+                  {formSubmitting ? (
+                    '⏳ Đang lưu dữ liệu...'
+                  ) : editingCombo ? (
+                    '💾 Cập nhật Combo'
+                  ) : (
+                    '✨ Thêm Combo ngay'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================
+            VIEW 4: DANH SÁCH MÓN ĂN, DANH MỤC & COMBO (LIST VIEW)
             ======================================================== */}
         {viewMode === 'list' && (
           <>
@@ -653,6 +1241,13 @@ function MenuPage() {
               >
                 <span>🍽️ Danh sách món ăn</span>
                 <span className="tab-badge">{totalItems}</span>
+              </button>
+              <button
+                className={`menu-tab-btn ${activeTab === 'combos' ? 'active' : ''}`}
+                onClick={() => setActiveTab('combos')}
+              >
+                <span>🍱 Quản lý Combo</span>
+                <span className="tab-badge">{totalCombos}</span>
               </button>
               <button
                 className={`menu-tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
@@ -669,36 +1264,28 @@ function MenuPage() {
                 <div className="stat-chip-icon green">🍲</div>
                 <div className="stat-chip-info">
                   <span className="stat-chip-val">{totalItems}</span>
-                  <span className="stat-chip-label">Tổng số món</span>
+                  <span className="stat-chip-label">Tổng món ({activeCount} hiển thị)</span>
                 </div>
               </div>
               <div className="stat-chip">
-                <div className="stat-chip-icon blue">👁️</div>
+                <div className="stat-chip-icon orange">🍱</div>
                 <div className="stat-chip-info">
-                  <span className="stat-chip-val">{activeCount}</span>
-                  <span className="stat-chip-label">Đang hiển thị</span>
+                  <span className="stat-chip-val">{totalCombos}</span>
+                  <span className="stat-chip-label">Tổng Combo ({activeCombosCount} hiển thị)</span>
                 </div>
               </div>
               <div className="stat-chip">
-                <div className="stat-chip-icon rose">🔒</div>
-                <div className="stat-chip-info">
-                  <span className="stat-chip-val">{inactiveCount}</span>
-                  <span className="stat-chip-label">Đang ẩn</span>
-                </div>
-              </div>
-              <div className="stat-chip">
-                <div className="stat-chip-icon green">📁</div>
+                <div className="stat-chip-icon blue">📁</div>
                 <div className="stat-chip-info">
                   <span className="stat-chip-val">{totalCategories}</span>
-                  <span className="stat-chip-label">Danh mục</span>
+                  <span className="stat-chip-label">Danh mục món</span>
                 </div>
               </div>
             </div>
 
-            {/* TAB MÓN ĂN */}
+            {/* TAB 1: MÓN ĂN */}
             {activeTab === 'items' && (
               <>
-                {/* Bộ lọc & Tìm kiếm */}
                 <div className="filter-bar">
                   <div className="filter-left">
                     <div className="search-box">
@@ -757,7 +1344,6 @@ function MenuPage() {
                   </div>
                 </div>
 
-                {/* Bảng món ăn */}
                 <div className="table-card">
                   {loading ? (
                     <div className="table-loading-state">
@@ -852,19 +1438,181 @@ function MenuPage() {
                               >
                                 Sửa
                               </button>
-                              <button
-                                className="action-btn danger"
-                                onClick={() => {
-                                  setDeleteTarget({
-                                    type: 'item',
-                                    id: item.id,
-                                    name: item.name,
-                                  })
-                                  setDeleteModalOpen(true)
-                                }}
-                                title="Xóa món ăn"
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* TAB 2: QUẢN LÝ COMBO */}
+            {activeTab === 'combos' && (
+              <>
+                <div className="filter-bar">
+                  <div className="filter-left">
+                    <div className="search-box">
+                      <span className="search-icon">🔍</span>
+                      <input
+                        type="text"
+                        placeholder="Tìm theo tên combo, mô tả món..."
+                        value={searchComboKeyword}
+                        onChange={(e) => setSearchComboKeyword(e.target.value)}
+                      />
+                    </div>
+
+                    <select
+                      className="filter-select"
+                      value={filterComboStatus}
+                      onChange={(e) => setFilterComboStatus(e.target.value)}
+                    >
+                      <option value="">-- Tất cả trạng thái --</option>
+                      <option value="ACTIVE">🟢 Hiển thị</option>
+                      <option value="INACTIVE">⚪ Ẩn</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-right">
+                    {(filterComboStatus || searchComboKeyword) && (
+                      <button
+                        className="btn-secondary"
+                        onClick={() => {
+                          setFilterComboStatus('')
+                          setSearchComboKeyword('')
+                        }}
+                      >
+                        ✕ Xóa lọc
+                      </button>
+                    )}
+                    <button className="btn-secondary" onClick={loadData} title="Làm mới">
+                      🔄 Làm mới
+                    </button>
+                    <button className="btn-primary-large" onClick={handleOpenCreateCombo}>
+                      + Thêm combo mới
+                    </button>
+                  </div>
+                </div>
+
+                <div className="table-card">
+                  {loading ? (
+                    <div className="table-loading-state">
+                      <div className="spinner" />
+                      <p>Đang tải danh sách combo...</p>
+                    </div>
+                  ) : filteredCombos.length === 0 ? (
+                    <div className="table-empty-state">
+                      <div className="icon">🍱</div>
+                      <p>
+                        {combos.length === 0
+                          ? 'Chưa có Combo nào được tạo trong hệ thống.'
+                          : 'Không tìm thấy Combo nào phù hợp với bộ lọc.'}
+                      </p>
+                      <button
+                        className="btn-primary-large"
+                        onClick={handleOpenCreateCombo}
+                        style={{ marginTop: 14 }}
+                      >
+                        + Tạo Combo đầu tiên ngay
+                      </button>
+                    </div>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '48%' }}>Combo & Danh sách món bao gồm</th>
+                          <th>Giá Combo</th>
+                          <th>Trạng thái</th>
+                          <th style={{ textAlign: 'right' }}>Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCombos.map((combo) => (
+                          <tr key={combo.id}>
+                            <td>
+                              <div className="menu-item-row-cell" style={{ alignItems: 'flex-start' }}>
+                                <div className="item-thumb-wrapper" style={{ borderColor: 'rgba(239, 108, 0, 0.2)', marginTop: 4 }}>
+                                  {combo.image ? (
+                                    <img
+                                      src={getImageFullUrl(combo.image)}
+                                      alt={combo.name}
+                                      className="item-thumb-img"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none'
+                                        if (e.target.nextSibling) {
+                                          e.target.nextSibling.style.display = 'block'
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span
+                                    className="item-thumb-placeholder"
+                                    style={{ display: combo.image ? 'none' : 'block' }}
+                                  >
+                                    🍱
+                                  </span>
+                                </div>
+                                <div className="item-meta">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span className="item-name">{combo.name}</span>
+                                    <span
+                                      style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        color: '#ef6c00',
+                                        background: '#fff3e0',
+                                        padding: '2px 6px',
+                                        borderRadius: '6px',
+                                      }}
+                                    >
+                                      COMBO
+                                    </span>
+                                  </div>
+                                  {combo.description && (
+                                    <span
+                                      className="item-ingredients"
+                                      title={combo.description}
+                                      style={{ maxWidth: 380 }}
+                                    >
+                                      📝 {combo.description}
+                                    </span>
+                                  )}
+                                  {/* CÁC MÓN ĂN TRONG COMBO */}
+                                  {combo.items && combo.items.length > 0 && (
+                                    <div className="combo-dishes-tags">
+                                      {combo.items.map((item, idx) => (
+                                        <span key={idx} className="dish-pill-badge">
+                                          <span className="qty">{item.quantity}x</span> {item.menuItemName}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="price" style={{ color: '#ef6c00', fontWeight: 800 }}>
+                              {formatCurrency(combo.price)}
+                            </td>
+                            <td>
+                              <select
+                                className={`status-select-badge ${combo.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
+                                value={combo.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}
+                                onChange={(e) =>
+                                  handleQuickComboStatusChange(combo, e.target.value)
+                                }
                               >
-                                Xóa
+                                <option value="ACTIVE">Hiển thị</option>
+                                <option value="INACTIVE">Ẩn</option>
+                              </select>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="action-btn"
+                                onClick={() => handleOpenEditCombo(combo)}
+                                title="Sửa combo"
+                              >
+                                Sửa
                               </button>
                             </td>
                           </tr>
@@ -876,7 +1624,7 @@ function MenuPage() {
               </>
             )}
 
-            {/* TAB DANH MỤC */}
+            {/* TAB 3: DANH MỤC */}
             {activeTab === 'categories' && (
               <div className="table-card">
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -926,13 +1674,16 @@ function MenuPage() {
                           </td>
                           <td style={{ color: '#6a7e71' }}>{cat.description || '—'}</td>
                           <td>
-                            <span
-                              className={`status-badge ${
-                                cat.status === 'INACTIVE' ? 'status-inactive' : 'status-active'
-                              }`}
+                            <select
+                              className={`status-select-badge ${cat.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
+                              value={cat.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}
+                              onChange={(e) =>
+                                handleQuickCategoryStatusChange(cat, e.target.value)
+                              }
                             >
-                              {cat.status === 'INACTIVE' ? 'Ẩn' : 'Hiển thị'}
-                            </span>
+                              <option value="ACTIVE">Hiển thị</option>
+                              <option value="INACTIVE">Ẩn</option>
+                            </select>
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <button
@@ -941,20 +1692,6 @@ function MenuPage() {
                               title="Sửa danh mục"
                             >
                               Sửa
-                            </button>
-                            <button
-                              className="action-btn danger"
-                              onClick={() => {
-                                setDeleteTarget({
-                                  type: 'category',
-                                  id: cat.id,
-                                  name: cat.name,
-                                })
-                                setDeleteModalOpen(true)
-                              }}
-                              title="Xóa danh mục"
-                            >
-                              Xóa
                             </button>
                           </td>
                         </tr>
@@ -967,59 +1704,6 @@ function MenuPage() {
           </>
         )}
       </div>
-
-      {/* ========================================================
-          MODAL: XÁC NHẬN XÓA AN TOÀN
-          ======================================================== */}
-      {deleteModalOpen && deleteTarget && (
-        <div className="modal-overlay" onClick={() => !formSubmitting && setDeleteModalOpen(false)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 style={{ color: '#ef5350' }}>⚠️ Xác nhận xóa</h3>
-              <button
-                className="modal-close-btn"
-                onClick={() => setDeleteModalOpen(false)}
-                disabled={formSubmitting}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <p style={{ margin: 0, color: '#2c3e33', fontSize: '0.95rem' }}>
-                Bạn có chắc chắn muốn xóa{' '}
-                {deleteTarget.type === 'item' ? 'món ăn' : 'danh mục'}{' '}
-                <strong>"{deleteTarget.name}"</strong> không?
-              </p>
-              {deleteTarget.type === 'item' && (
-                <p style={{ margin: '6px 0 0', color: '#8b9c91', fontSize: '0.82rem' }}>
-                  * File ảnh lưu trên server cũng sẽ được xóa an toàn.
-                </p>
-              )}
-            </div>
-
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setDeleteModalOpen(false)}
-                disabled={formSubmitting}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="action-btn danger"
-                style={{ padding: '9px 20px', fontSize: '0.85rem' }}
-                onClick={handleConfirmDelete}
-                disabled={formSubmitting}
-              >
-                {formSubmitting ? 'Đang xóa...' : 'Xác nhận xóa'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================
           TOAST NOTIFICATION

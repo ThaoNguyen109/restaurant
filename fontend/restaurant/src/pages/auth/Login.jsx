@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
 import { loginUser } from '../../services/authService'
@@ -10,7 +10,18 @@ function Login() {
     password: '',
   })
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('') // 'error' | 'warning' | 'success'
   const [loading, setLoading] = useState(false)
+
+  // Hiển thị thông báo nếu bị redirect về từ trang khác (hết hạn / không quyền)
+  useEffect(() => {
+    const authMessage = sessionStorage.getItem('authMessage')
+    if (authMessage) {
+      setMessage(authMessage)
+      setMessageType('warning')
+      sessionStorage.removeItem('authMessage')
+    }
+  }, [])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -22,6 +33,7 @@ function Login() {
 
     if (!formData.username || !formData.password) {
       setMessage('Vui lòng nhập tên đăng nhập và mật khẩu.')
+      setMessageType('error')
       return
     }
 
@@ -35,19 +47,28 @@ function Login() {
 
       localStorage.setItem('token', response.token)
       localStorage.setItem('userRole', response.role || 'STAFF')
+      localStorage.setItem('username', response.username || formData.username)
 
       const role = (response.role || 'STAFF').toUpperCase()
       if (role === 'ADMIN') {
         navigate('/admin')
       } else if (role === 'MANAGER') {
         navigate('/manager')
+      } else if (role === 'KITCHEN' || role === 'CHEF') {
+        navigate('/kitchen')
+      } else if (role === 'CASHIER') {
+        navigate('/cashier')
+      } else if (role === 'WAITER' || role === 'STAFF') {
+        navigate('/staff')
       } else {
         navigate('/staff')
       }
 
       setMessage(`Đăng nhập thành công. Chào ${response.username}!`)
+      setMessageType('success')
     } catch (error) {
       setMessage(error.message || 'Đăng nhập thất bại')
+      setMessageType('error')
     } finally {
       setLoading(false)
     }
@@ -106,7 +127,10 @@ function Login() {
         </form>
 
         {message && (
-          <p className={`status ${message.includes('Vui lòng') ? 'error' : 'success'}`}>
+          <p className={`status ${messageType}`}>
+            {messageType === 'warning' && '⚠️ '}
+            {messageType === 'error' && '❌ '}
+            {messageType === 'success' && '✅ '}
             {message}
           </p>
         )}

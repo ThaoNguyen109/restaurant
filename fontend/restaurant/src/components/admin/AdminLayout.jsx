@@ -1,14 +1,17 @@
 import './AdminLayout.css';
 import '../../pages/admin/AdminPages.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 function AdminLayout({ title, subtitle, actions, children }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
     { label: 'Tổng quan', path: '/admin' },
     { label: 'Quản lý nhân viên', path: '/admin/employees' },
     { label: 'Đơn hàng', path: '/admin/orders' },
+    { label: 'Quản lý bàn', path: '/admin/tables' },
+    { label: 'Quản lý đặt bàn', path: '/admin/reservations' },
     { label: 'Kho nguyên liệu', path: '/admin/inventory' },
     { label: 'Thực đơn', path: '/admin/menu' },
     { label: 'Báo cáo', path: '/admin/reports' },
@@ -30,7 +33,7 @@ function AdminLayout({ title, subtitle, actions, children }) {
           {menuItems.map((item, idx) => (
             <button
               key={idx}
-              className={window.location.pathname === item.path ? 'active' : ''}
+              className={location.pathname === item.path ? 'active' : ''}
               onClick={() => navigate(item.path)}
             >
               <span className="nav-bullet" />

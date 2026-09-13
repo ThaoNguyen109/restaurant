@@ -1,5 +1,4 @@
-import { buildApiUrl } from '../config/api'
-import { getAuthHeaders } from './apiClient'
+import { getAuthHeaders, apiFetch } from './apiClient'
 
 // 1. Lấy danh sách món ăn (có thể lọc theo categoryId, search, status)
 export async function getAllMenuItems(params = {}) {
@@ -11,7 +10,7 @@ export async function getAllMenuItems(params = {}) {
   const queryString = queryParams.toString()
   const endpoint = queryString ? `/api/menu-items?${queryString}` : '/api/menu-items'
 
-  const response = await fetch(buildApiUrl(endpoint), {
+  const response = await apiFetch(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -25,7 +24,7 @@ export async function getAllMenuItems(params = {}) {
 
 // 2. Lấy chi tiết một món ăn
 export async function getMenuItemById(id) {
-  const response = await fetch(buildApiUrl(`/api/menu-items/${id}`), {
+  const response = await apiFetch(`/api/menu-items/${id}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -39,9 +38,9 @@ export async function getMenuItemById(id) {
 
 // 3. Thêm món ăn mới kèm file ảnh (FormData)
 export async function createMenuItem(formData) {
-  const response = await fetch(buildApiUrl('/api/menu-items'), {
+  const response = await apiFetch('/api/menu-items', {
     method: 'POST',
-    headers: getAuthHeaders(true), // isFormData = true (để trình duyệt tự set multipart boundary)
+    headers: getAuthHeaders(true), // isFormData = true
     body: formData,
   })
 
@@ -58,7 +57,7 @@ export async function createMenuItem(formData) {
 
 // 4. Cập nhật món ăn (FormData)
 export async function updateMenuItem(id, formData) {
-  const response = await fetch(buildApiUrl(`/api/menu-items/${id}`), {
+  const response = await apiFetch(`/api/menu-items/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(true),
     body: formData,
@@ -77,7 +76,7 @@ export async function updateMenuItem(id, formData) {
 
 // 5. Cập nhật nhanh trạng thái món ăn (ACTIVE, INACTIVE, OUT_OF_STOCK)
 export async function updateMenuItemStatus(id, status) {
-  const response = await fetch(buildApiUrl(`/api/menu-items/${id}/status`), {
+  const response = await apiFetch(`/api/menu-items/${id}/status`, {
     method: 'PATCH',
     headers: getAuthHeaders(false),
     body: JSON.stringify({ status }),
@@ -92,7 +91,7 @@ export async function updateMenuItemStatus(id, status) {
 
 // 6. Xóa món ăn
 export async function deleteMenuItem(id) {
-  const response = await fetch(buildApiUrl(`/api/menu-items/${id}`), {
+  const response = await apiFetch(`/api/menu-items/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   })

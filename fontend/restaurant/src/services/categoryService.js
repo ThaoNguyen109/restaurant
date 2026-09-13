@@ -1,9 +1,8 @@
-import { buildApiUrl } from '../config/api'
-import { getAuthHeaders } from './apiClient'
+import { getAuthHeaders, apiFetch } from './apiClient'
 
 // 1. Lấy tất cả danh mục
 export async function getAllCategories() {
-  const response = await fetch(buildApiUrl('/api/categories'), {
+  const response = await apiFetch('/api/categories', {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -17,7 +16,7 @@ export async function getAllCategories() {
 
 // 2. Lấy chi tiết danh mục theo ID
 export async function getCategoryById(id) {
-  const response = await fetch(buildApiUrl(`/api/categories/${id}`), {
+  const response = await apiFetch(`/api/categories/${id}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -31,7 +30,7 @@ export async function getCategoryById(id) {
 
 // 3. Tạo danh mục mới
 export async function createCategory(categoryData) {
-  const response = await fetch(buildApiUrl('/api/categories'), {
+  const response = await apiFetch('/api/categories', {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(categoryData),
@@ -46,7 +45,7 @@ export async function createCategory(categoryData) {
 
 // 4. Cập nhật danh mục
 export async function updateCategory(id, categoryData) {
-  const response = await fetch(buildApiUrl(`/api/categories/${id}`), {
+  const response = await apiFetch(`/api/categories/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(categoryData),
@@ -61,7 +60,7 @@ export async function updateCategory(id, categoryData) {
 
 // 5. Xóa danh mục
 export async function deleteCategory(id) {
-  const response = await fetch(buildApiUrl(`/api/categories/${id}`), {
+  const response = await apiFetch(`/api/categories/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   })

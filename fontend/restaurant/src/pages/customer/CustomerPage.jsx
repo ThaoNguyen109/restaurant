@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './CustomerPage.css'
+import { createReservation } from '../../services/reservationService'
 
 /* ── Helpers ── */
 function scrollToSection(id) {
@@ -265,20 +266,102 @@ function MenuCTASection() {
    RESERVATION
 ════════════════════════════════ */
 function ReservationSection() {
-  const [form, setForm] = useState({ name: '', phone: '', date: '', time: '', guests: '2', note: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const [toastMsg, setToastMsg] = useState('')
+  const todayStr = new Date().toISOString().split('T')[0]
 
-  const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    date: todayStr,
+    time: '18:30',
+    guests: '2',
+    note: '',
+  })
+  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [bookingSuccess, setBookingSuccess] = useState(null)
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const validate = () => {
+    const errs = {}
+    if (!form.name.trim()) {
+      errs.name = 'Vui lòng nhập họ và tên của bạn'
+    }
+
+    if (!form.phone.trim()) {
+      errs.phone = 'Vui lòng nhập số điện thoại'
+    } else if (!/^(\+84|0)[0-9]{8,10}$/.test(form.phone.trim())) {
+      errs.phone = 'Số điện thoại không hợp lệ (VD: 0912345678)'
+    }
+
+    if (!form.email.trim()) {
+      errs.email = 'Vui lòng nhập địa chỉ email'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = 'Định dạng email không hợp lệ (VD: name@domain.com)'
+    }
+
+    if (!form.date) {
+      errs.date = 'Vui lòng chọn ngày dùng bữa'
+    }
+
+    if (!form.time) {
+      errs.time = 'Vui lòng chọn giờ dùng bữa'
+    }
+
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setErrorMsg('')
+
+    if (!validate()) {
+      return
+    }
+
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setSubmitting(false)
-    setToastMsg('✅ Đặt bàn thành công! Chúng tôi sẽ liên hệ xác nhận trong giây lát.')
-    setForm({ name: '', phone: '', date: '', time: '', guests: '2', note: '' })
-    setTimeout(() => setToastMsg(''), 5000)
+    try {
+      const payload = {
+        customerName: form.name.trim(),
+        customerPhone: form.phone.trim(),
+        customerEmail: form.email.trim(),
+        reservationDate: form.date,
+        reservationTime: form.time,
+        numberOfGuests: Number(form.guests),
+        note: form.note.trim() || null,
+      }
+
+      const res = await createReservation(payload)
+      setBookingSuccess(res)
+    } catch (err) {
+      setErrorMsg(err.message || 'Đặt bàn không thành công. Vui lòng thử lại sau.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReset = () => {
+    setBookingSuccess(null)
+    setForm({
+      name: '',
+      phone: '',
+      email: '',
+      date: todayStr,
+      time: '18:30',
+      guests: '2',
+      note: '',
+    })
+    setErrors({})
+    setErrorMsg('')
   }
 
   return (
@@ -287,70 +370,173 @@ function ReservationSection() {
       <div className="cp-reservation-card">
         <div className="cp-reservation-header">
           <span className="cp-section-tag">Đặt bàn trực tuyến</span>
-          <h2 className="cp-section-title">Trải Nghiệm<br />Ẩm Thực Hoàn Hảo</h2>
+          <h2 className="cp-section-title">
+            Trải Nghiệm
+            <br />
+            Ẩm Thực Hoàn Hảo
+          </h2>
           <div className="cp-section-divider"></div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7' }}>
-            Đặt bàn trước để được giữ chỗ ngồi ưng ý và chuẩn bị chu đáo nhất.
+            Đặt bàn trước để được giữ chỗ ngồi ưng ý và nhà hàng phục vụ chu đáo nhất.
           </p>
         </div>
 
-        <form className="cp-reservation-form" onSubmit={handleSubmit}>
-          <div className="cp-form-row">
-            <div className="cp-form-group">
-              <label>Họ và tên *</label>
-              <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Nguyễn Văn A" required />
+        {bookingSuccess ? (
+          <div className="cp-reservation-success-card">
+            <div className="cp-success-icon">🎉</div>
+            <h3>Đặt Bàn Thành Công!</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              Cảm ơn quý khách <strong>{bookingSuccess.customerName}</strong> đã lựa chọn Nhà Hàng Hoa Sen.
+            </p>
+            <div className="cp-success-code">
+              Mã đặt bàn: #{bookingSuccess.id}
             </div>
-            <div className="cp-form-group">
-              <label>Số điện thoại *</label>
-              <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="0912 345 678" required />
+
+            <div className="cp-success-grid">
+              <div className="cp-success-item">
+                <span className="label">Số điện thoại</span>
+                <span className="val">{bookingSuccess.customerPhone}</span>
+              </div>
+              <div className="cp-success-item">
+                <span className="label">Email</span>
+                <span className="val">{bookingSuccess.customerEmail || '—'}</span>
+              </div>
+              <div className="cp-success-item">
+                <span className="label">Thời gian</span>
+                <span className="val">
+                  {bookingSuccess.reservationTime?.substring(0, 5)} ngày {bookingSuccess.reservationDate}
+                </span>
+              </div>
+              <div className="cp-success-item">
+                <span className="label">Số lượng khách</span>
+                <span className="val">{bookingSuccess.numberOfGuests} người</span>
+              </div>
             </div>
+
+            <p className="cp-success-note">
+              Nhân viên chăm sóc khách hàng của chúng tôi sẽ gọi điện hoặc gửi email xác nhận trong thời gian sớm nhất.
+            </p>
+
+            <button type="button" className="cp-btn-primary" onClick={handleReset}>
+              ✨ Đặt thêm bàn khác
+            </button>
           </div>
-          <div className="cp-form-row">
-            <div className="cp-form-group">
-              <label>Ngày dùng bữa *</label>
-              <input type="date" name="date" value={form.date} onChange={handleChange} required />
+        ) : (
+          <form className="cp-reservation-form" onSubmit={handleSubmit}>
+            {errorMsg && (
+              <div className="cp-alert-error">
+                <span>⚠️</span>
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="cp-form-row">
+              <div className="cp-form-group">
+                <label>Họ và tên *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Nguyễn Văn A"
+                />
+                {errors.name && <span className="cp-field-error">{errors.name}</span>}
+              </div>
+              <div className="cp-form-group">
+                <label>Số điện thoại *</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="0912 345 678"
+                />
+                {errors.phone && <span className="cp-field-error">{errors.phone}</span>}
+              </div>
             </div>
+
             <div className="cp-form-group">
-              <label>Giờ dùng bữa *</label>
-              <select name="time" value={form.time} onChange={handleChange} required>
-                <option value="">-- Chọn giờ --</option>
-                <option value="11:00">11:00 (Trưa)</option>
-                <option value="12:00">12:00 (Trưa)</option>
-                <option value="13:00">13:00 (Trưa)</option>
-                <option value="18:00">18:00 (Tối)</option>
-                <option value="19:00">19:00 (Tối)</option>
-                <option value="20:00">20:00 (Tối)</option>
+              <label>Địa chỉ Email *</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="example@gmail.com"
+              />
+              {errors.email && <span className="cp-field-error">{errors.email}</span>}
+            </div>
+
+            <div className="cp-form-row">
+              <div className="cp-form-group">
+                <label>Ngày dùng bữa *</label>
+                <input
+                  type="date"
+                  name="date"
+                  min={todayStr}
+                  value={form.date}
+                  onChange={handleChange}
+                />
+                {errors.date && <span className="cp-field-error">{errors.date}</span>}
+              </div>
+              <div className="cp-form-group">
+                <label>Giờ dùng bữa *</label>
+                <select name="time" value={form.time} onChange={handleChange}>
+                  <option value="">-- Chọn giờ --</option>
+                  <optgroup label="Buổi trưa">
+                    <option value="11:00">11:00 (Trưa)</option>
+                    <option value="11:30">11:30 (Trưa)</option>
+                    <option value="12:00">12:00 (Trưa)</option>
+                    <option value="12:30">12:30 (Trưa)</option>
+                    <option value="13:00">13:00 (Trưa)</option>
+                    <option value="13:30">13:30 (Trưa)</option>
+                  </optgroup>
+                  <optgroup label="Buổi tối">
+                    <option value="17:30">17:30 (Tối)</option>
+                    <option value="18:00">18:00 (Tối)</option>
+                    <option value="18:30">18:30 (Tối)</option>
+                    <option value="19:00">19:00 (Tối)</option>
+                    <option value="19:30">19:30 (Tối)</option>
+                    <option value="20:00">20:00 (Tối)</option>
+                    <option value="20:30">20:30 (Tối)</option>
+                    <option value="21:00">21:00 (Tối)</option>
+                  </optgroup>
+                </select>
+                {errors.time && <span className="cp-field-error">{errors.time}</span>}
+              </div>
+            </div>
+
+            <div className="cp-form-group">
+              <label>Số lượng khách *</label>
+              <select name="guests" value={form.guests} onChange={handleChange}>
+                <option value="1">1 người (Bàn đơn)</option>
+                <option value="2">2 người (Cặp đôi)</option>
+                <option value="3">3 người</option>
+                <option value="4">4 người (Gia đình nhỏ)</option>
+                <option value="5">5 người</option>
+                <option value="6">6 người (Gia đình / Nhóm bạn)</option>
+                <option value="8">8 người (Tiệc thân mật)</option>
+                <option value="10">10 người (Bàn dài)</option>
+                <option value="15">15 người (Phòng riêng)</option>
+                <option value="20">20+ người (Tiệc đoàn)</option>
               </select>
             </div>
-          </div>
-          <div className="cp-form-group">
-            <label>Số lượng khách</label>
-            <select name="guests" value={form.guests} onChange={handleChange}>
-              <option value="1">1 người</option>
-              <option value="2">2 người (Cặp đôi)</option>
-              <option value="4">3 - 4 người (Gia đình)</option>
-              <option value="6">5 - 6 người</option>
-              <option value="10">Nhóm đông (7 - 10+ người)</option>
-            </select>
-          </div>
-          <div className="cp-form-group">
-            <label>Ghi chú đặc biệt (Tùy chọn)</label>
-            <textarea name="note" value={form.note} onChange={handleChange} rows="3"
-              placeholder="Yêu cầu vị trí bàn gần cửa sổ, ăn chay, kỷ niệm sinh nhật..." />
-          </div>
-          <button type="submit" className="cp-btn-primary cp-btn-full" disabled={submitting}>
-            {submitting ? '⏳ Đang ghi nhận...' : '✨ Xác Nhận Đặt Bàn'}
-          </button>
-        </form>
 
-        {toastMsg && (
-          <div style={{
-            marginTop: '18px', padding: '14px 20px', borderRadius: '12px',
-            background: 'rgba(46, 125, 50, 0.2)', border: '1px solid #2e7d32',
-            color: '#81c784', fontSize: '14px', textAlign: 'center',
-          }}>
-            {toastMsg}
-          </div>
+            <div className="cp-form-group">
+              <label>Ghi chú đặc biệt (Tùy chọn)</label>
+              <textarea
+                name="note"
+                value={form.note}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Yêu cầu vị trí bàn gần cửa sổ, ăn chay, kỷ niệm sinh nhật, đặt hoa..."
+              />
+            </div>
+
+            <button type="submit" className="cp-btn-primary cp-btn-full" disabled={submitting}>
+              {submitting ? '⏳ Đang gửi thông tin...' : '✨ Xác Nhận Đặt Bàn Ngay'}
+            </button>
+          </form>
         )}
       </div>
     </section>

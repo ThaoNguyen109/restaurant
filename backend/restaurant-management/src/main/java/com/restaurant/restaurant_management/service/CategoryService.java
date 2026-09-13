@@ -32,12 +32,14 @@ public class CategoryService {
     // Thêm danh mục
     public Category createCategory(Category category) {
 
-        if (categoryRepository.existsByName(category.getName())) {
+        String trimmedName = category.getName() != null ? category.getName().trim() : "";
+        if (categoryRepository.existsByName(trimmedName)) {
             throw new RuntimeException("Tên danh mục đã tồn tại");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
+        category.setName(trimmedName);
         if (category.getStatus() == null || category.getStatus().isBlank()) {
             category.setStatus("ACTIVE");
         }
@@ -52,14 +54,16 @@ public class CategoryService {
 
         Category category = getCategoryById(id);
 
+        String trimmedName = categoryRequest.getName() != null ? categoryRequest.getName().trim() : "";
+
         // Kiểm tra nếu đổi tên và tên mới đã tồn tại
-        if (!category.getName().equals(categoryRequest.getName())
-                && categoryRepository.existsByName(categoryRequest.getName())) {
+        if (!category.getName().equalsIgnoreCase(trimmedName)
+                && categoryRepository.existsByName(trimmedName)) {
 
             throw new RuntimeException("Tên danh mục đã tồn tại");
         }
 
-        category.setName(categoryRequest.getName());
+        category.setName(trimmedName);
         category.setDescription(categoryRequest.getDescription());
 
         if (categoryRequest.getStatus() != null) {

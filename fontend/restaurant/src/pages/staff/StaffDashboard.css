@@ -1,0 +1,533 @@
+/* ================================================================
+   WAITER / STAFF POS DASHBOARD — Touch & Tablet Friendly Theme
+   ================================================================ */
+
+.waiter-container {
+  min-height: 100vh;
+  background-color: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #1e293b;
+}
+
+/* ── Topbar ────────────────────────────────────────────────────── */
+.waiter-topbar {
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.waiter-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.waiter-brand-logo {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #2a4736, #1e3527);
+  color: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.waiter-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e3527;
+}
+
+.waiter-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.waiter-tab-btn {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waiter-tab-btn.active {
+  background: #2a4736;
+  color: #ffffff;
+  border-color: #2a4736;
+}
+
+.waiter-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.waiter-link-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #334155;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.waiter-link-btn:hover {
+  background: #cbd5e1;
+}
+
+/* ── Content ───────────────────────────────────────────────────── */
+.waiter-content {
+  flex: 1;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Table Floor Grid ──────────────────────────────────────────── */
+.waiter-table-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.waiter-stat-pill {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.waiter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.waiter-dot.available { background: #22c55e; }
+.waiter-dot.occupied  { background: #f59e0b; }
+.waiter-dot.reserved  { background: #3b82f6; }
+
+.waiter-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.waiter-table-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 2px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 160px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.waiter-table-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.waiter-table-card.AVAILABLE {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.waiter-table-card.OCCUPIED {
+  border-color: #fde047;
+  background: #fefce8;
+}
+
+.waiter-table-card.RESERVED {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.waiter-table-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.waiter-table-num {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #1e3527;
+}
+
+.waiter-table-cap {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.waiter-table-status-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+
+.waiter-table-status-tag.AVAILABLE { background: #dcfce7; color: #15803d; }
+.waiter-table-status-tag.OCCUPIED  { background: #fef9c3; color: #a16207; }
+.waiter-table-status-tag.RESERVED  { background: #dbeafe; color: #1d4ed8; }
+
+.waiter-table-card-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.waiter-active-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #b8860b;
+}
+
+.waiter-active-count {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* ── Order POS Layout ──────────────────────────────────────────── */
+.waiter-pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  height: calc(100vh - 120px);
+}
+
+.waiter-menu-pane {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.waiter-menu-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.waiter-category-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.waiter-cat-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.waiter-cat-btn.active {
+  background: #2a4736;
+  color: #ffffff;
+  border-color: #2a4736;
+}
+
+.waiter-dishes-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding-right: 4px;
+}
+
+.waiter-dish-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.waiter-dish-card:hover {
+  border-color: #2a4736;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(42, 71, 54, 0.08);
+}
+
+.waiter-dish-thumb {
+  width: 100%;
+  height: 110px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+
+.waiter-dish-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e3527;
+  line-height: 1.3;
+}
+
+.waiter-dish-price {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #b8860b;
+}
+
+/* ── Cart / Order Panel ────────────────────────────────────────── */
+.waiter-cart-pane {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.waiter-cart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.waiter-cart-table-badge {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #2a4736;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waiter-cart-items-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.waiter-cart-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.waiter-cart-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.waiter-cart-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waiter-stepper-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waiter-stepper-btn:hover {
+  background: #e2e8f0;
+}
+
+.waiter-cart-footer {
+  border-top: 2px dashed #cbd5e1;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.waiter-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #1e3527;
+}
+
+.waiter-submit-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #2a4736, #1e3527);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.waiter-submit-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.waiter-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Modal for Existing Occupied Table Order ───────────────────── */
+.waiter-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.waiter-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.waiter-table-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.waiter-table-items th {
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.waiter-table-items td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.waiter-cancel-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #ef4444;
+  background: #fef2f2;
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.waiter-cancel-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.waiter-locked-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* ── Toast ─────────────────────────────────────────────────────── */
+.waiter-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e3527;
+  color: #ffffff;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  z-index: 2000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}

@@ -1,0 +1,523 @@
+/* ================================================================
+   CASHIER POS PAGE — Luxury Gold & Emerald Cashier Terminal
+   ================================================================ */
+
+.cashier-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #0f172a;
+}
+
+/* ── Top Bar ───────────────────────────────────────────────────── */
+.cashier-topbar {
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.cashier-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cashier-brand-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #b8860b, #996515);
+  color: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.25);
+}
+
+.cashier-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e3527;
+}
+
+.cashier-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.cashier-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cashier-shift-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.cashier-shift-stat .val {
+  font-weight: 800;
+  color: #1e3527;
+}
+
+.cashier-shift-stat .val.gold {
+  color: #b8860b;
+}
+
+.cashier-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cashier-clock {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1e3527;
+  background: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.cashier-link-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #334155;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.cashier-link-btn:hover {
+  background: #cbd5e1;
+}
+
+/* ── Content Layout ────────────────────────────────────────────── */
+.cashier-content {
+  flex: 1;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  height: calc(100vh - 80px);
+  box-sizing: border-box;
+}
+
+/* ── Left Pane: Active Tables & Unpaid Orders List ──────────────── */
+.cashier-left-pane {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.cashier-search-box {
+  position: relative;
+  width: 100%;
+}
+
+.cashier-search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.cashier-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.cashier-orders-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.cashier-order-card {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cashier-order-card:hover {
+  border-color: #b8860b;
+  transform: translateX(2px);
+}
+
+.cashier-order-card.selected {
+  border-color: #2a4736;
+  background: #f0fdf4;
+  box-shadow: 0 4px 12px rgba(42, 71, 54, 0.1);
+}
+
+.cashier-order-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cashier-table-name {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #1e3527;
+}
+
+.cashier-order-code {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.cashier-order-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.cashier-order-amount {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #b8860b;
+}
+
+.cashier-status-pill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cashier-status-pill.PENDING   { background: #fff3e0; color: #e65100; }
+.cashier-status-pill.PREPARING { background: #fce4ec; color: #c2185b; }
+.cashier-status-pill.SERVING   { background: #e8f5e9; color: #2e7d32; }
+
+/* ── Right Pane ────────────────────────────────────────────────── */
+.cashier-right-pane {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.cashier-bill-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.cashier-bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.cashier-items-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.cashier-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.cashier-items-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 10px 8px;
+  border-bottom: 2px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cashier-items-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+/* ── Payment Column ─────────────────────────────────────────────── */
+.cashier-payment-column {
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cashier-calc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cashier-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.cashier-calc-row.final {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #1e3527;
+  padding-top: 10px;
+  border-top: 2px dashed #cbd5e1;
+}
+
+.cashier-calc-row.final .price {
+  color: #b8860b;
+}
+
+.cashier-method-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cashier-method-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.cashier-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cashier-method-btn {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.cashier-method-btn.active {
+  border-color: #2a4736;
+  background: #2a4736;
+  color: #ffffff;
+}
+
+.cashier-cash-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+}
+
+.cashier-cash-input-group label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.cashier-cash-input-group input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1e3527;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.cashier-change-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #16a34a;
+  padding-top: 4px;
+}
+
+.cashier-qr-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.cashier-qr-img {
+  width: 130px;
+  height: 130px;
+  border-radius: 8px;
+}
+
+.cashier-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cashier-checkout-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #2a4736, #1e3527);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(42, 71, 54, 0.2);
+}
+
+.cashier-checkout-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.cashier-checkout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cashier-print-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #b8860b;
+  background: #fffdf0;
+  color: #b8860b;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cashier-print-btn:hover {
+  background: #b8860b;
+  color: #ffffff;
+}
+
+/* ── Receipt Modal ─────────────────────────────────────────────── */
+.cashier-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cashier-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Toast ─────────────────────────────────────────────────────── */
+.cashier-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e3527;
+  color: #ffffff;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  z-index: 2000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Bill Receipt Styles ────────────────────────────────────────── */
+.ord-bill-container { font-size: 0.88rem; }
+.ord-bill-header { text-align: center; padding-bottom: 12px; border-bottom: 1px dashed #000; margin-bottom: 12px; }
+.ord-bill-meta { display: flex; justify-content: space-between; margin-bottom: 12px; }
+.ord-bill-items { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.ord-bill-items th { border-bottom: 1px solid #000; padding: 4px 0; font-size: 0.78rem; text-align: left; }
+.ord-bill-items td { padding: 4px 0; }
+.ord-bill-footer { border-top: 1px dashed #000; padding-top: 8px; }
+.ord-bill-total-row { display: flex; justify-content: space-between; font-weight: 900; font-size: 1rem; }
