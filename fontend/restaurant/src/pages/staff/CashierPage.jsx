@@ -144,9 +144,10 @@ function CashierPage() {
         <div className="cashier-topbar-right">
           <div className="cashier-clock">{currentTime}</div>
           <button className="cashier-link-btn" onClick={fetchData}>🔄 Làm mới</button>
-          {canAccessStaff   && <a href="/staff"        className="cashier-link-btn">🍽️ Phục vụ</a>}
-          {canAccessKitchen && <a href="/kitchen"      className="cashier-link-btn">🍳 Bếp</a>}
-          {canAccessAdmin   && <a href="/admin/orders" className="cashier-link-btn">📊 Admin</a>}
+          {canAccessStaff   && <a href="/staff"              className="cashier-link-btn">🍽️ Phục vụ</a>}
+          {canAccessStaff   && <a href="/staff/reservations" className="cashier-link-btn">📅 Đặt bàn</a>}
+          {canAccessKitchen && <a href="/kitchen"            className="cashier-link-btn">🍳 Bếp</a>}
+          {canAccessAdmin   && <a href="/admin/orders"       className="cashier-link-btn">📊 Admin</a>}
         </div>
       </header>
 

@@ -59,6 +59,8 @@ public class SecurityConfig {
                 // ── Public endpoints ──────────────────────────────────
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/api/email/**").permitAll()
 
                 // Khách hàng xem menu, category, combo (chỉ GET)
                 .requestMatchers(HttpMethod.GET,
@@ -68,7 +70,7 @@ public class SecurityConfig {
 
                 // Khách hàng xem bàn (GET) và đặt bàn (POST)
                 .requestMatchers(HttpMethod.GET, "/api/tables", "/api/tables/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/reservations").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/reservations", "/api/reservations/**").permitAll()
 
                 // ── Menu-items: ADMIN + MANAGER ───────────────────────
                 .requestMatchers(HttpMethod.POST, "/api/menu-items/**")
@@ -105,21 +107,21 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/tables/**")
                         .hasAnyRole("ADMIN", "MANAGER")
-                // Cập nhật trạng thái bàn: WAITER, STAFF, CHEF được phép
+                // Cập nhật trạng thái bàn: WAITER, STAFF, CHEF, RECEPTIONIST được phép
                 .requestMatchers(HttpMethod.PATCH, "/api/tables/**")
-                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "CHEF")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "CHEF", "RECEPTIONIST")
 
                 // ── Reservations ──────────────────────────────────────
-                // GET danh sách: ADMIN, MANAGER
+                // GET danh sách: ADMIN, MANAGER, WAITER, STAFF, RECEPTIONIST, CASHIER
                 .requestMatchers(HttpMethod.GET, "/api/reservations/**")
-                        .hasAnyRole("ADMIN", "MANAGER")
-                // PUT, PATCH, DELETE: ADMIN, MANAGER
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "RECEPTIONIST", "CASHIER")
+                // PUT, PATCH, DELETE: ADMIN, MANAGER, WAITER, STAFF, RECEPTIONIST, CASHIER
                 .requestMatchers(HttpMethod.PUT, "/api/reservations/**")
-                        .hasAnyRole("ADMIN", "MANAGER")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "RECEPTIONIST", "CASHIER")
                 .requestMatchers(HttpMethod.PATCH, "/api/reservations/**")
-                        .hasAnyRole("ADMIN", "MANAGER")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "RECEPTIONIST", "CASHIER")
                 .requestMatchers(HttpMethod.DELETE, "/api/reservations/**")
-                        .hasAnyRole("ADMIN", "MANAGER")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "RECEPTIONIST", "CASHIER")
 
                 // ── Orders ────────────────────────────────────────────
                 // GET orders: tất cả nhân viên đăng nhập

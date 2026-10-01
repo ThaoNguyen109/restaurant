@@ -15,6 +15,7 @@ import KitchenPage from '../pages/staff/KitchenPage'
 import CashierPage from '../pages/staff/CashierPage'
 import CustomerPage from '../pages/customer/CustomerPage'
 import CustomerMenuPage from '../pages/customer/CustomerMenuPage'
+import StaffReservationsPage from '../pages/staff/StaffReservationsPage'
 import ProtectedRoute from '../components/ProtectedRoute'
 
 export const router = createBrowserRouter([
@@ -122,11 +123,11 @@ export const router = createBrowserRouter([
     ),
   },
 
-  // ── Nhân viên phục vụ (ADMIN + MANAGER + WAITER + STAFF) ─────────
+  // ── Nhân viên phục vụ (ADMIN + MANAGER + WAITER + STAFF + RECEPTIONIST) ──
   {
     path: '/staff',
     element: (
-      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF']}>
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF', 'RECEPTIONIST']}>
         <StaffDashboard />
       </ProtectedRoute>
     ),
@@ -134,8 +135,26 @@ export const router = createBrowserRouter([
   {
     path: '/waiter',
     element: (
-      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF']}>
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF', 'RECEPTIONIST']}>
         <StaffDashboard />
+      </ProtectedRoute>
+    ),
+  },
+
+  // ── Quản lý đặt bàn cho nhân viên (ADMIN + MANAGER + WAITER + STAFF + RECEPTIONIST) ──
+  {
+    path: '/staff/reservations',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF', 'RECEPTIONIST']}>
+        <StaffReservationsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/reservations',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER', 'STAFF', 'RECEPTIONIST']}>
+        <StaffReservationsPage />
       </ProtectedRoute>
     ),
   },

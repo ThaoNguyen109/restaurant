@@ -8,6 +8,7 @@ import com.restaurant.restaurant_management.entity.RestaurantTable;
 import com.restaurant.restaurant_management.repository.ReservationRepository;
 import com.restaurant.restaurant_management.repository.RestaurantTableRepository;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,16 +17,23 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final RestaurantTableRepository restaurantTableRepository;
+    private final EmailService emailService;
+    private final WebSocketEventService wsEventService;
 
     public ReservationService(ReservationRepository reservationRepository,
-                              RestaurantTableRepository restaurantTableRepository) {
+                              RestaurantTableRepository restaurantTableRepository,
+                              EmailService emailService,
+                              WebSocketEventService wsEventService) {
         this.reservationRepository = reservationRepository;
         this.restaurantTableRepository = restaurantTableRepository;
+        this.emailService = emailService;
+        this.wsEventService = wsEventService;
     }
 
     // ── Mapper ─────────────────────────────────────────────────────
@@ -89,50 +97,158 @@ public class ReservationService {
     // ── Tạo đặt bàn mới (khách hàng – không cần auth) ────────────
     public ReservationResponse createReservation(ReservationRequest request) {
         Reservation r = buildReservation(new Reservation(), request);
-        r.setStatus("PENDING");
+        String initialStatus = (request.getStatus() != null && !request.getStatus().isBlank())
+                ? request.getStatus() : "PENDING";
+        r.setStatus(initialStatus);
         r.setCreatedAt(LocalDateTime.now());
         r.setUpdatedAt(LocalDateTime.now());
-        return toResponse(reservationRepository.save(r));
+        Reservation saved = reservationRepository.save(r);
+        log.info("[RESERVATION] Đã lưu đặt bàn #{} cho {} ({} khách)",
+                saved.getId(), saved.getCustomerName(), saved.getNumberOfGuests());
+
+        // Nếu tạo đơn với trạng thái CONFIRMED và có bàn -> cập nhật bàn sang RESERVED
+        if ("CONFIRMED".equals(initialStatus) && saved.getTable() != null) {
+            RestaurantTable table = saved.getTable();
+            table.setStatus("RESERVED");
+            restaurantTableRepository.save(table);
+        }
+
+        // ★ GỬI WEBSOCKET EVENT NGAY (TRƯỚC email) để frontend nhận realtime ★
+        ReservationResponse resp = toResponse(saved);
+        try {
+            wsEventService.sendReservationEvent("RESERVATION_CREATED",
+                    "Khách " + saved.getCustomerName() + " vừa đặt bàn (" + saved.getNumberOfGuests() + " khách) lúc " + saved.getReservationTime(),
+                    resp);
+            log.info("[RESERVATION] ✓ Đã gửi WebSocket event RESERVATION_CREATED cho đặt bàn #{}", saved.getId());
+        } catch (Exception wsEx) {
+            log.error("[RESERVATION] ✗ Lỗi gửi WebSocket event: {}", wsEx.getMessage(), wsEx);
+        }
+
+        // Gửi email (sau WS event, bọc try-catch để không ảnh hưởng response)
+        try {
+            String email    = saved.getCustomerEmail();
+            String name     = saved.getCustomerName();
+            String tableStr = (saved.getTable() != null && saved.getTable().getTableNumber() != null)
+                    ? String.valueOf(saved.getTable().getTableNumber()) : null;
+            String date     = saved.getReservationDate()  != null ? saved.getReservationDate().toString()  : "";
+            String time     = saved.getReservationTime()  != null ? saved.getReservationTime().toString()  : "";
+            int    guests   = saved.getNumberOfGuests()   != null ? saved.getNumberOfGuests()              : 1;
+
+            if (email != null && !email.isBlank()) {
+                if ("CONFIRMED".equals(initialStatus)) {
+                    emailService.sendReservationConfirmed(email, name, tableStr, date, time, guests);
+                } else {
+                    emailService.sendReservationPending(email, name, tableStr, date, time, guests);
+                }
+                log.info("[RESERVATION] Đã gọi gửi email tới {}", email);
+            }
+        } catch (Exception emailEx) {
+            log.error("[RESERVATION] ✗ Lỗi gửi email (không ảnh hưởng đặt bàn): {}", emailEx.getMessage());
+        }
+
+        return resp;
     }
 
-    // ── Cập nhật đặt bàn (admin) ──────────────────────────────────
+    // ── Cập nhật đặt bàn (admin / staff) ──────────────────────────
     public ReservationResponse updateReservation(Long id, ReservationRequest request) {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đặt bàn với ID: " + id));
+
+        String oldStatus = r.getStatus();
+        RestaurantTable oldTable = r.getTable();
+
         buildReservation(r, request);
 
-        // Admin có thể cập nhật trạng thái
+        // Có thể cập nhật trạng thái
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             r.setStatus(request.getStatus());
         }
 
+        String newStatus = r.getStatus();
+        RestaurantTable newTable = r.getTable();
+
+        // Đồng bộ trạng thái bàn nếu bàn cũ thay đổi
+        if (oldTable != null && (newTable == null || !oldTable.getId().equals(newTable.getId()))) {
+            if (List.of("PENDING", "CONFIRMED").contains(oldStatus)) {
+                oldTable.setStatus("AVAILABLE");
+                restaurantTableRepository.save(oldTable);
+            }
+        }
+        if (newTable != null) {
+            if ("CONFIRMED".equals(newStatus)) {
+                newTable.setStatus("RESERVED");
+                restaurantTableRepository.save(newTable);
+            } else if (List.of("CANCELLED", "COMPLETED", "NO_SHOW").contains(newStatus)) {
+                newTable.setStatus("AVAILABLE");
+                restaurantTableRepository.save(newTable);
+            }
+        }
+
         r.setUpdatedAt(LocalDateTime.now());
-        return toResponse(reservationRepository.save(r));
+        Reservation updated = reservationRepository.save(r);
+        ReservationResponse resp = toResponse(updated);
+        wsEventService.sendReservationEvent("RESERVATION_UPDATED",
+                "Đơn đặt bàn của " + updated.getCustomerName() + " đã được cập nhật",
+                resp);
+        return resp;
     }
 
     // ── Cập nhật nhanh trạng thái ─────────────────────────────────
     public ReservationResponse updateStatus(Long id, ReservationStatusRequest request) {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đặt bàn với ID: " + id));
-        r.setStatus(request.getStatus());
+
+        String newStatus = request.getStatus();
+        r.setStatus(newStatus);
         r.setUpdatedAt(LocalDateTime.now());
 
-        // Nếu CONFIRMED, cập nhật bàn sang RESERVED
-        if ("CONFIRMED".equals(request.getStatus()) && r.getTable() != null) {
-            RestaurantTable table = r.getTable();
-            table.setStatus("RESERVED");
-            restaurantTableRepository.save(table);
+        // Trích xuất toàn bộ dữ liệu cần thiết TRƯỚC khi gọi @Async
+        // (JPA session đóng sau transaction; lazy-load trên async thread sẽ fail)
+        String email    = r.getCustomerEmail();
+        String name     = r.getCustomerName();
+        String tableStr = (r.getTable() != null && r.getTable().getTableNumber() != null)
+                ? String.valueOf(r.getTable().getTableNumber()) : null;
+        String date     = r.getReservationDate() != null ? r.getReservationDate().toString() : "";
+        String time     = r.getReservationTime() != null ? r.getReservationTime().toString() : "";
+        int    guests   = r.getNumberOfGuests()  != null ? r.getNumberOfGuests()             : 1;
+
+        // Nếu CONFIRMED → cập nhật bàn sang RESERVED + gửi mail xác nhận
+        if ("CONFIRMED".equals(newStatus)) {
+            if (r.getTable() != null) {
+                RestaurantTable table = r.getTable();
+                table.setStatus("RESERVED");
+                restaurantTableRepository.save(table);
+            }
+            if (email != null && !email.isBlank()) {
+                emailService.sendReservationConfirmed(email, name, tableStr, date, time, guests);
+            }
         }
 
-        // Nếu CANCELLED / NO_SHOW / COMPLETED => trả bàn về AVAILABLE
-        if (List.of("CANCELLED", "NO_SHOW", "COMPLETED").contains(request.getStatus())
-                && r.getTable() != null) {
+        // Nếu CANCELLED → trả bàn về AVAILABLE + gửi mail từ chối
+        if ("CANCELLED".equals(newStatus)) {
+            if (r.getTable() != null) {
+                RestaurantTable table = r.getTable();
+                table.setStatus("AVAILABLE");
+                restaurantTableRepository.save(table);
+            }
+            if (email != null && !email.isBlank()) {
+                emailService.sendReservationCancelled(email, name, date, time);
+            }
+        }
+
+        // Nếu NO_SHOW / COMPLETED => trả bàn về AVAILABLE (không gửi mail)
+        if (List.of("NO_SHOW", "COMPLETED").contains(newStatus) && r.getTable() != null) {
             RestaurantTable table = r.getTable();
             table.setStatus("AVAILABLE");
             restaurantTableRepository.save(table);
         }
 
-        return toResponse(reservationRepository.save(r));
+        Reservation updated = reservationRepository.save(r);
+        ReservationResponse resp = toResponse(updated);
+        wsEventService.sendReservationEvent("RESERVATION_STATUS_CHANGED",
+                "Đơn đặt bàn của " + updated.getCustomerName() + " chuyển sang " + newStatus,
+                resp);
+        return resp;
     }
 
     // ── Xoá đặt bàn (admin) ───────────────────────────────────────
@@ -146,6 +262,25 @@ public class ReservationService {
             restaurantTableRepository.save(table);
         }
         reservationRepository.delete(r);
+        wsEventService.sendReservationEvent("RESERVATION_DELETED",
+                "Đơn đặt bàn #" + id + " của " + r.getCustomerName() + " đã được xóa",
+                toResponse(r));
+    }
+
+    // ── Gửi event thử nghiệm (để kiểm tra chuông realtime từ server) ──
+    public void sendTestNotification() {
+        ReservationResponse mock = new ReservationResponse();
+        mock.setId(999L);
+        mock.setCustomerName("Nguyễn Khách Thử");
+        mock.setCustomerPhone("0901234567");
+        mock.setNumberOfGuests(4);
+        mock.setReservationDate(LocalDate.now());
+        mock.setReservationTime(LocalTime.now());
+        mock.setStatus("PENDING");
+        mock.setNote("Đơn kiểm tra chuông realtime từ máy chủ");
+        wsEventService.sendReservationEvent("RESERVATION_CREATED",
+                "Khách Nguyễn Khách Thử vừa đặt bàn (4 khách) [TEST]",
+                mock);
     }
 
     // ── Thống kê hôm nay ──────────────────────────────────────────
@@ -155,11 +290,12 @@ public class ReservationService {
 
     // ── Helper: parse + fill entity ───────────────────────────────
     private Reservation buildReservation(Reservation r, ReservationRequest request) {
-        r.setCustomerName(request.getCustomerName());
-        r.setCustomerPhone(request.getCustomerPhone());
-        r.setCustomerEmail(request.getCustomerEmail());
+        r.setCustomerName(request.getCustomerName() != null ? request.getCustomerName().trim() : "");
+        r.setCustomerPhone(request.getCustomerPhone() != null ? request.getCustomerPhone().trim() : "");
+        r.setCustomerEmail(request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()
+                ? request.getCustomerEmail().trim() : null);
         r.setNumberOfGuests(request.getNumberOfGuests());
-        r.setNote(request.getNote());
+        r.setNote(request.getNote() != null && !request.getNote().isBlank() ? request.getNote().trim() : null);
 
         // Parse date
         r.setReservationDate(LocalDate.parse(request.getReservationDate()));

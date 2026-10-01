@@ -16,6 +16,8 @@ import { getAllCombos } from '../../services/comboService'
 import { getAllCategories } from '../../services/categoryService'
 import { getImageFullUrl } from '../../services/apiClient'
 import { getRole } from '../../utils/auth'
+import { subscribeWebSocket } from '../../services/websocketService'
+import { playStaffNotification, playReservationAlert } from '../../utils/soundNotification'
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0)
@@ -93,6 +95,48 @@ function StaffDashboard() {
 
   useEffect(() => {
     fetchData()
+
+    // Realtime subscription for order updates (from kitchen, staff, etc.)
+    const unsubOrders = subscribeWebSocket('/topic/orders', (event) => {
+      console.log('[Staff Realtime Order Event]:', event)
+      if (event?.message) {
+        showToast(`⚡ ${event.message}`)
+      }
+      playStaffNotification()
+
+      // If active table modal is open with this order, update it immediately in place
+      if (event?.data?.id) {
+        setActiveTableOrder(prev => (prev && prev.id === event.data.id ? event.data : prev))
+      }
+
+      fetchData()
+    })
+
+    // Realtime subscription for table status changes
+    const unsubTables = subscribeWebSocket('/topic/tables', (event) => {
+      console.log('[Staff Realtime Table Event]:', event)
+      fetchData()
+    })
+
+    // Realtime subscription for guest reservations
+    const unsubReservations = subscribeWebSocket('/topic/reservations', (event) => {
+      console.log('[Staff Realtime Reservation Event]:', event)
+      if (event?.eventType === 'RESERVATION_CREATED') {
+        playReservationAlert()
+        if (event?.message) {
+          showToast(`🔔 ${event.message}`)
+        }
+      } else {
+        playStaffNotification()
+      }
+      fetchData()
+    })
+
+    return () => {
+      unsubOrders()
+      unsubTables()
+      unsubReservations()
+    }
   }, [fetchData])
 
   // ── Table Selection Handlers ─────────────────────────────────────
@@ -134,9 +178,9 @@ function StaffDashboard() {
       const existingIdx = prev.findIndex(item => isCombo ? item.comboId === product.id : item.menuItemId === product.id)
 
       if (existingIdx > -1) {
-        const copy = [...prev]
-        copy[existingIdx].quantity += 1
-        return copy
+        return prev.map((item, idx) =>
+          idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
+        )
       } else {
         return [
           ...prev,
@@ -157,22 +201,22 @@ function StaffDashboard() {
 
   const handleUpdateCartQty = (index, delta) => {
     setCart(prev => {
-      const copy = [...prev]
-      const newQty = copy[index].quantity + delta
+      const target = prev[index]
+      if (!target) return prev
+      const newQty = target.quantity + delta
       if (newQty <= 0) {
-        return copy.filter((_, i) => i !== index)
+        return prev.filter((_, i) => i !== index)
       }
-      copy[index].quantity = newQty
-      return copy
+      return prev.map((item, i) =>
+        i === index ? { ...item, quantity: newQty } : item
+      )
     })
   }
 
   const handleUpdateCartNote = (index, note) => {
-    setCart(prev => {
-      const copy = [...prev]
-      copy[index].note = note
-      return copy
-    })
+    setCart(prev =>
+      prev.map((item, i) => (i === index ? { ...item, note } : item))
+    )
   }
 
   const handleRemoveFromCart = (index) => {
@@ -308,6 +352,9 @@ function StaffDashboard() {
         </div>
 
         <div className="waiter-topbar-right">
+          <a href="/staff/reservations" className="waiter-link-btn" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 800 }}>
+            📅 Đặt bàn
+          </a>
           <button className="waiter-tab-btn" onClick={fetchData} title="Làm mới">
             🔄 Làm mới
           </button>
@@ -455,32 +502,53 @@ function StaffDashboard() {
                       Không có món ăn khả dụng
                     </div>
                   ) : (
-                    filteredMenuItems.map(dish => (
-                      <div
-                        key={dish.id}
-                        className="waiter-dish-card"
-                        onClick={() => handleAddToCart(dish, false)}
-                      >
-                        {dish.image ? (
-                          <img
-                            src={getImageFullUrl(dish.image)}
-                            alt={dish.name}
-                            className="waiter-dish-thumb"
-                          />
-                        ) : (
-                          <div
-                            className="waiter-dish-thumb"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}
-                          >
-                            🍲
+                    filteredMenuItems.map(dish => {
+                      const inCart = cart.find(c => c.menuItemId === dish.id)
+                      return (
+                        <div
+                          key={dish.id}
+                          className={`waiter-dish-card ${inCart ? 'in-cart' : ''}`}
+                          onClick={() => handleAddToCart(dish, false)}
+                        >
+                          <div className="waiter-dish-thumb-wrap">
+                            {dish.image ? (
+                              <img
+                                src={getImageFullUrl(dish.image)}
+                                alt={dish.name}
+                                className="waiter-dish-thumb"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="waiter-dish-no-thumb">
+                                🍲
+                              </div>
+                            )}
+                            {inCart && (
+                              <span className="waiter-dish-badge">
+                                ✓ {inCart.quantity}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <div className="waiter-dish-name">{dish.name}</div>
-                          <div className="waiter-dish-price">{formatCurrency(dish.price)}</div>
+                          <div className="waiter-dish-info">
+                            <div className="waiter-dish-name" title={dish.name}>{dish.name}</div>
+                            <div className="waiter-dish-bottom">
+                              <div className="waiter-dish-price">{formatCurrency(dish.price)}</div>
+                              <button
+                                type="button"
+                                className="waiter-dish-add-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddToCart(dish, false)
+                                }}
+                                title="Thêm món"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )
                 ) : (
                   filteredCombos.length === 0 ? (
@@ -488,32 +556,53 @@ function StaffDashboard() {
                       Không có combo khả dụng
                     </div>
                   ) : (
-                    filteredCombos.map(combo => (
-                      <div
-                        key={combo.id}
-                        className="waiter-dish-card"
-                        onClick={() => handleAddToCart(combo, true)}
-                      >
-                        {combo.image ? (
-                          <img
-                            src={getImageFullUrl(combo.image)}
-                            alt={combo.name}
-                            className="waiter-dish-thumb"
-                          />
-                        ) : (
-                          <div
-                            className="waiter-dish-thumb"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}
-                          >
-                            🍱
+                    filteredCombos.map(combo => {
+                      const inCart = cart.find(c => c.comboId === combo.id)
+                      return (
+                        <div
+                          key={combo.id}
+                          className={`waiter-dish-card ${inCart ? 'in-cart' : ''}`}
+                          onClick={() => handleAddToCart(combo, true)}
+                        >
+                          <div className="waiter-dish-thumb-wrap">
+                            {combo.image ? (
+                              <img
+                                src={getImageFullUrl(combo.image)}
+                                alt={combo.name}
+                                className="waiter-dish-thumb"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="waiter-dish-no-thumb">
+                                🍱
+                              </div>
+                            )}
+                            {inCart && (
+                              <span className="waiter-dish-badge">
+                                ✓ {inCart.quantity}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <div className="waiter-dish-name">{combo.name}</div>
-                          <div className="waiter-dish-price">{formatCurrency(combo.price)}</div>
+                          <div className="waiter-dish-info">
+                            <div className="waiter-dish-name" title={combo.name}>{combo.name}</div>
+                            <div className="waiter-dish-bottom">
+                              <div className="waiter-dish-price">{formatCurrency(combo.price)}</div>
+                              <button
+                                type="button"
+                                className="waiter-dish-add-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddToCart(combo, true)
+                                }}
+                                title="Thêm combo"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )
                 )}
               </div>
@@ -536,38 +625,48 @@ function StaffDashboard() {
 
               <div className="waiter-cart-items-list">
                 {cart.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 10px', color: '#94a3b8' }}>
-                    Chưa chọn món nào. Nhấn vào món bên trái để thêm vào đơn.
+                  <div className="waiter-cart-empty">
+                    <span style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🛒</span>
+                    <div>Chưa chọn món nào.</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                      Nhấn vào món bên trái để thêm vào đơn.
+                    </div>
                   </div>
                 ) : (
                   cart.map((item, idx) => (
                     <div key={item.key || idx} className="waiter-cart-item">
                       <div className="waiter-cart-item-row">
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e3527' }}>
-                          {item.name}
-                        </span>
+                        <div className="waiter-cart-item-info">
+                          <span className="waiter-cart-item-name">{item.name}</span>
+                          <span className="waiter-cart-item-price">
+                            {formatCurrency(item.price * item.quantity)}
+                          </span>
+                        </div>
                         <div className="waiter-cart-stepper">
                           <button
                             type="button"
                             className="waiter-stepper-btn"
                             onClick={() => handleUpdateCartQty(idx, -1)}
+                            title="Giảm 1"
                           >
-                            -
+                            −
                           </button>
-                          <span style={{ fontWeight: 800, minWidth: '20px', textAlign: 'center' }}>
+                          <span className="waiter-stepper-qty">
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             className="waiter-stepper-btn"
                             onClick={() => handleUpdateCartQty(idx, 1)}
+                            title="Tăng 1"
                           >
                             +
                           </button>
                           <button
                             type="button"
-                            style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', marginLeft: '4px' }}
+                            className="waiter-cart-del-btn"
                             onClick={() => handleRemoveFromCart(idx)}
+                            title="Xóa món"
                           >
                             ✕
                           </button>
@@ -579,14 +678,7 @@ function StaffDashboard() {
                         placeholder="Ghi chú món (vd: ít cay, không hành...)"
                         value={item.note || ''}
                         onChange={e => handleUpdateCartNote(idx, e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '0.78rem',
-                          boxSizing: 'border-box',
-                        }}
+                        className="waiter-cart-note-input"
                       />
                     </div>
                   ))

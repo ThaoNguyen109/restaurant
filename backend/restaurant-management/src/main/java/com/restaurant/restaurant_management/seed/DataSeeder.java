@@ -1,23 +1,38 @@
 package com.restaurant.restaurant_management.seed;
 
+import com.restaurant.restaurant_management.entity.Reservation;
+import com.restaurant.restaurant_management.entity.RestaurantTable;
 import com.restaurant.restaurant_management.entity.User;
+import com.restaurant.restaurant_management.repository.ReservationRepository;
+import com.restaurant.restaurant_management.repository.RestaurantTableRepository;
 import com.restaurant.restaurant_management.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
+
     private final UserRepository userRepository;
+    private final RestaurantTableRepository restaurantTableRepository;
+    private final ReservationRepository reservationRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
-        // Seed Admin
+        seedUsers();
+        seedSampleReservations();
+    }
+
+    private void seedUsers() {
+        // ── 1. Admin ──────────────────────────────────────────────────
         if (userRepository.findByUsername("admin").isEmpty()) {
             User admin = new User();
             admin.setUsername("admin");
@@ -32,7 +47,36 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        // Seed Bếp (Chef)
+        // ── 2. Lễ tân (Receptionist) ──────────────────────────────────
+        if (userRepository.findByUsername("receptionist").isEmpty()) {
+            User receptionist = new User();
+            receptionist.setUsername("receptionist");
+            receptionist.setPassword(passwordEncoder.encode("123456"));
+            receptionist.setFullName("Lễ Tân Nhà Hàng");
+            receptionist.setEmail("receptionist@restaurant.com");
+            receptionist.setPhone("0904111111");
+            receptionist.setRole("RECEPTIONIST");
+            receptionist.setStatus("ACTIVE");
+            receptionist.setCreatedAt(LocalDateTime.now());
+            receptionist.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(receptionist);
+        }
+
+        if (userRepository.findByUsername("letan01").isEmpty()) {
+            User receptionist2 = new User();
+            receptionist2.setUsername("letan01");
+            receptionist2.setPassword(passwordEncoder.encode("123456"));
+            receptionist2.setFullName("Nguyễn Thu Trang");
+            receptionist2.setEmail("letan01@restaurant.com");
+            receptionist2.setPhone("0904222222");
+            receptionist2.setRole("RECEPTIONIST");
+            receptionist2.setStatus("ACTIVE");
+            receptionist2.setCreatedAt(LocalDateTime.now());
+            receptionist2.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(receptionist2);
+        }
+
+        // ── 3. Bếp (Chef) ─────────────────────────────────────────────
         if (userRepository.findByUsername("bep01").isEmpty()) {
             User chef = new User();
             chef.setUsername("bep01");
@@ -61,7 +105,7 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(chef2);
         }
 
-        // Seed Phục vụ (Waiter)
+        // ── 4. Phục vụ (Waiter) ───────────────────────────────────────
         if (userRepository.findByUsername("phucvu01").isEmpty()) {
             User waiter1 = new User();
             waiter1.setUsername("phucvu01");
@@ -104,7 +148,7 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(waiter3);
         }
 
-        // Seed Thu ngân (Cashier)
+        // ── 5. Thu ngân (Cashier) ─────────────────────────────────────
         if (userRepository.findByUsername("thungan01").isEmpty()) {
             User cashier = new User();
             cashier.setUsername("thungan01");
@@ -118,5 +162,82 @@ public class DataSeeder implements CommandLineRunner {
             cashier.setUpdatedAt(LocalDateTime.now());
             userRepository.save(cashier);
         }
+    }
+
+    private void seedSampleReservations() {
+        if (reservationRepository.count() > 0) {
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
+        List<RestaurantTable> tables = restaurantTableRepository.findAll();
+        RestaurantTable table1 = tables.size() > 0 ? tables.get(0) : null;
+        RestaurantTable table2 = tables.size() > 1 ? tables.get(1) : null;
+
+        // Đơn 1: Hôm nay 18:30 (Đã xác nhận)
+        Reservation r1 = new Reservation();
+        r1.setCustomerName("Nguyễn Văn Tuấn");
+        r1.setCustomerPhone("0901234567");
+        r1.setCustomerEmail("tuan.nguyen@gmail.com");
+        r1.setReservationDate(today);
+        r1.setReservationTime(LocalTime.of(18, 30));
+        r1.setNumberOfGuests(4);
+        r1.setStatus("CONFIRMED");
+        r1.setNote("Khách quen, muốn ngồi gần cửa sổ");
+        r1.setTable(table1);
+        r1.setCreatedAt(LocalDateTime.now().minusHours(3));
+        r1.setUpdatedAt(LocalDateTime.now().minusHours(3));
+        reservationRepository.save(r1);
+
+        if (table1 != null) {
+            table1.setStatus("RESERVED");
+            restaurantTableRepository.save(table1);
+        }
+
+        // Đơn 2: Hôm nay 19:00 (Chờ duyệt)
+        Reservation r2 = new Reservation();
+        r2.setCustomerName("Trần Thị Mai");
+        r2.setCustomerPhone("0912345678");
+        r2.setCustomerEmail("mai.tran@gmail.com");
+        r2.setReservationDate(today);
+        r2.setReservationTime(LocalTime.of(19, 0));
+        r2.setNumberOfGuests(2);
+        r2.setStatus("PENDING");
+        r2.setNote("Kỷ niệm ngày cưới, cần không gian yên tĩnh");
+        r2.setTable(null);
+        r2.setCreatedAt(LocalDateTime.now().minusHours(1));
+        r2.setUpdatedAt(LocalDateTime.now().minusHours(1));
+        reservationRepository.save(r2);
+
+        // Đơn 3: Hôm nay 11:30 (Khách đã đến / Hoàn thành)
+        Reservation r3 = new Reservation();
+        r3.setCustomerName("Lê Hoàng Long");
+        r3.setCustomerPhone("0987654321");
+        r3.setCustomerEmail("long.le@gmail.com");
+        r3.setReservationDate(today);
+        r3.setReservationTime(LocalTime.of(11, 30));
+        r3.setNumberOfGuests(6);
+        r3.setStatus("COMPLETED");
+        r3.setNote("Ăn trưa công ty");
+        r3.setTable(null);
+        r3.setCreatedAt(LocalDateTime.now().minusHours(6));
+        r3.setUpdatedAt(LocalDateTime.now().minusHours(5));
+        reservationRepository.save(r3);
+
+        // Đơn 4: Ngày mai 19:30 (Đã xác nhận)
+        Reservation r4 = new Reservation();
+        r4.setCustomerName("Phạm Minh Đức");
+        r4.setCustomerPhone("0933445566");
+        r4.setCustomerEmail("duc.pham@gmail.com");
+        r4.setReservationDate(tomorrow);
+        r4.setReservationTime(LocalTime.of(19, 30));
+        r4.setNumberOfGuests(8);
+        r4.setStatus("CONFIRMED");
+        r4.setNote("Tiệc sinh nhật, cần chuẩn bị 1 ghế trẻ em");
+        r4.setTable(table2);
+        r4.setCreatedAt(LocalDateTime.now().minusHours(2));
+        r4.setUpdatedAt(LocalDateTime.now().minusHours(2));
+        reservationRepository.save(r4);
     }
 }

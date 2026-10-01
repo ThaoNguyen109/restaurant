@@ -12,7 +12,6 @@ public class ReservationRequest {
     @Pattern(regexp = "^(\\+84|0)[0-9]{8,10}$", message = "Số điện thoại không hợp lệ")
     private String customerPhone;
 
-    @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không hợp lệ")
     @Size(max = 150, message = "Email không được vượt quá 150 ký tự")
     private String customerEmail;

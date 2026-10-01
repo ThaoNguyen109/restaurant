@@ -15,9 +15,11 @@ import java.util.stream.Collectors;
 public class RestaurantTableService {
 
     private final RestaurantTableRepository restaurantTableRepository;
+    private final WebSocketEventService wsEventService;
 
-    public RestaurantTableService(RestaurantTableRepository restaurantTableRepository) {
+    public RestaurantTableService(RestaurantTableRepository restaurantTableRepository, WebSocketEventService wsEventService) {
         this.restaurantTableRepository = restaurantTableRepository;
+        this.wsEventService = wsEventService;
     }
 
     // ── Mapper helper ──────────────────────────────────────────────────────────
@@ -98,7 +100,9 @@ public class RestaurantTableService {
         }
         table.setUpdatedAt(LocalDateTime.now());
 
-        return toResponse(restaurantTableRepository.save(table));
+        RestaurantTableResponse resp = toResponse(restaurantTableRepository.save(table));
+        wsEventService.sendTableEvent("TABLE_UPDATED", "Cập nhật Bàn " + resp.getTableNumber(), resp);
+        return resp;
     }
 
     // ── Cập nhật nhanh trạng thái bàn ────────────────────────────────────────
@@ -106,7 +110,9 @@ public class RestaurantTableService {
         RestaurantTable table = getTableById(id);
         table.setStatus(request.getStatus());
         table.setUpdatedAt(LocalDateTime.now());
-        return toResponse(restaurantTableRepository.save(table));
+        RestaurantTableResponse resp = toResponse(restaurantTableRepository.save(table));
+        wsEventService.sendTableEvent("TABLE_STATUS_CHANGED", "Bàn " + resp.getTableNumber() + " đổi sang " + resp.getStatus(), resp);
+        return resp;
     }
 
     // ── Xóa mềm (đặt INACTIVE) ───────────────────────────────────────────────
@@ -114,6 +120,7 @@ public class RestaurantTableService {
         RestaurantTable table = getTableById(id);
         table.setStatus("INACTIVE");
         table.setUpdatedAt(LocalDateTime.now());
-        restaurantTableRepository.save(table);
+        RestaurantTable saved = restaurantTableRepository.save(table);
+        wsEventService.sendTableEvent("TABLE_DELETED", "Bàn " + saved.getTableNumber() + " đã ngưng hoạt động", toResponse(saved));
     }
 }

@@ -23,19 +23,22 @@ public class OrderService {
     private final RestaurantTableRepository restaurantTableRepository;
     private final MenuItemRepository menuItemRepository;
     private final ComboRepository comboRepository;
+    private final WebSocketEventService wsEventService;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderItemRepository orderItemRepository,
             RestaurantTableRepository restaurantTableRepository,
             MenuItemRepository menuItemRepository,
-            ComboRepository comboRepository
+            ComboRepository comboRepository,
+            WebSocketEventService wsEventService
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.restaurantTableRepository = restaurantTableRepository;
         this.menuItemRepository = menuItemRepository;
         this.comboRepository = comboRepository;
+        this.wsEventService = wsEventService;
     }
 
     // ── Mapper Helpers ─────────────────────────────────────────────
@@ -98,6 +101,18 @@ public class OrderService {
         }
 
         return builder.build();
+    }
+
+    private RestaurantTableResponse toTableResponse(RestaurantTable table) {
+        if (table == null) return null;
+        return new RestaurantTableResponse(
+                table.getId(),
+                table.getTableNumber(),
+                table.getCapacity(),
+                table.getStatus(),
+                table.getCreatedAt(),
+                table.getUpdatedAt()
+        );
     }
 
     // ── Business Methods ──────────────────────────────────────────
@@ -165,7 +180,13 @@ public class OrderService {
         restaurantTableRepository.save(table);
 
         Order saved = orderRepository.save(order);
-        return toOrderResponse(saved);
+        OrderResponse resp = toOrderResponse(saved);
+
+        wsEventService.sendKitchenEvent("ORDER_CREATED", "Bàn " + table.getTableNumber() + " vừa gọi món mới", resp);
+        wsEventService.sendOrderEvent("ORDER_CREATED", "Bàn " + table.getTableNumber() + " vừa mở đơn", resp);
+        wsEventService.sendTableEvent("TABLE_UPDATED", "Bàn " + table.getTableNumber() + " chuyển sang Có khách", toTableResponse(table));
+
+        return resp;
     }
 
     /**
@@ -240,7 +261,17 @@ public class OrderService {
             restaurantTableRepository.save(table);
         }
 
-        return toOrderResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        OrderResponse resp = toOrderResponse(saved);
+
+        String msg = "Đơn #" + order.getId() + " đổi trạng thái sang " + newStatus;
+        wsEventService.sendKitchenEvent("ORDER_STATUS_CHANGED", msg, resp);
+        wsEventService.sendOrderEvent("ORDER_STATUS_CHANGED", msg, resp);
+        if (order.getTable() != null) {
+            wsEventService.sendTableEvent("TABLE_UPDATED", "Bàn " + order.getTable().getTableNumber() + " trạng thái: " + order.getTable().getStatus(), toTableResponse(order.getTable()));
+        }
+
+        return resp;
     }
 
     /**
@@ -281,7 +312,14 @@ public class OrderService {
         recalculateTotal(order);
         order.setUpdatedAt(LocalDateTime.now());
 
-        return toOrderResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        OrderResponse resp = toOrderResponse(saved);
+
+        String tableNum = order.getTable() != null ? String.valueOf(order.getTable().getTableNumber()) : "";
+        wsEventService.sendKitchenEvent("ITEM_ADDED", "Bàn " + tableNum + " vừa gọi thêm món mới", resp);
+        wsEventService.sendOrderEvent("ITEM_ADDED", "Bàn " + tableNum + " gọi thêm món", resp);
+
+        return resp;
     }
 
     /**
@@ -325,7 +363,18 @@ public class OrderService {
         item.setStatus(request.getStatus());
         recalculateTotal(order);
         order.setUpdatedAt(LocalDateTime.now());
-        return toOrderResponse(orderRepository.save(order));
+
+        Order saved = orderRepository.save(order);
+        OrderResponse resp = toOrderResponse(saved);
+
+        String itemName = item.getMenuItem() != null ? item.getMenuItem().getName() : (item.getCombo() != null ? item.getCombo().getName() : "Món");
+        String tableNum = order.getTable() != null ? " Bàn " + order.getTable().getTableNumber() : "";
+        String msg = "Món " + itemName + tableNum + " -> " + request.getStatus();
+
+        wsEventService.sendKitchenEvent("ITEM_STATUS_CHANGED", msg, resp);
+        wsEventService.sendOrderEvent("ITEM_STATUS_CHANGED", msg, resp);
+
+        return resp;
     }
 
     /**
@@ -343,7 +392,13 @@ public class OrderService {
         order.removeOrderItem(item);
         recalculateTotal(order);
         order.setUpdatedAt(LocalDateTime.now());
-        return toOrderResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        OrderResponse resp = toOrderResponse(saved);
+
+        wsEventService.sendKitchenEvent("ITEM_DELETED", "Một món trong đơn #" + order.getId() + " đã bị hủy", resp);
+        wsEventService.sendOrderEvent("ITEM_DELETED", "Hủy món khỏi đơn #" + order.getId(), resp);
+
+        return resp;
     }
 
     /**

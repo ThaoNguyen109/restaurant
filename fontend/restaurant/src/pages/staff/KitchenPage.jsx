@@ -8,6 +8,8 @@ import {
 } from '../../services/orderService'
 import { getAllMenuItems, updateMenuItemStatus } from '../../services/menuItemService'
 import { getImageFullUrl } from '../../services/apiClient'
+import { subscribeWebSocket } from '../../services/websocketService'
+import { playKitchenAlert } from '../../utils/soundNotification'
 
 function getElapsedMinutes(dateString) {
   if (!dateString) return 0
@@ -74,9 +76,27 @@ function KitchenPage() {
   useEffect(() => {
     fetchOrders()
     fetchMenuItems()
-    // Auto refresh KDS every 10s
-    const interval = setInterval(fetchOrders, 10000)
-    return () => clearInterval(interval)
+
+    // Realtime WebSocket subscription for kitchen orders
+    const unsubscribe = subscribeWebSocket('/topic/kitchen', (event) => {
+      console.log('[KDS Realtime Event]:', event)
+      if (event?.eventType === 'ORDER_CREATED' || event?.eventType === 'ITEM_ADDED') {
+        playKitchenAlert()
+        showToast(`🔔 ${event.message || 'Có món mới cần nấu!'}`)
+      } else if (event?.message) {
+        showToast(`ℹ️ ${event.message}`)
+      }
+
+      fetchOrders()
+    })
+
+    // Fallback polling every 30s to guarantee sync if connection fluctuates
+    const interval = setInterval(fetchOrders, 30000)
+
+    return () => {
+      unsubscribe()
+      clearInterval(interval)
+    }
   }, [fetchOrders, fetchMenuItems])
 
   // ── Handlers: Item Status Changes ─────────────────────────────────
@@ -190,9 +210,10 @@ function KitchenPage() {
           <button className="kds-nav-btn" onClick={fetchOrders} title="Làm mới">
             🔄
           </button>
-          {canAccessStaff   && <a href="/staff"   className="kds-role-link">🍽️ Phục vụ</a>}
-          {canAccessCashier && <a href="/cashier" className="kds-role-link">💰 Thu ngân</a>}
-          {canAccessAdmin   && <a href="/admin/orders" className="kds-role-link">📊 Admin</a>}
+          {canAccessStaff   && <a href="/staff"              className="kds-role-link">🍽️ Phục vụ</a>}
+          {canAccessStaff   && <a href="/staff/reservations" className="kds-role-link">📅 Đặt bàn</a>}
+          {canAccessCashier && <a href="/cashier"            className="kds-role-link">💰 Thu ngân</a>}
+          {canAccessAdmin   && <a href="/admin/orders"       className="kds-role-link">📊 Admin</a>}
         </div>
       </header>
 

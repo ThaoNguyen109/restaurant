@@ -54,6 +54,8 @@ function Login() {
         navigate('/admin')
       } else if (role === 'MANAGER') {
         navigate('/manager')
+      } else if (role === 'RECEPTIONIST') {
+        navigate('/staff/reservations')
       } else if (role === 'KITCHEN' || role === 'CHEF') {
         navigate('/kitchen')
       } else if (role === 'CASHIER') {
@@ -124,6 +126,40 @@ function Login() {
           <button type="submit" disabled={loading}>
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
+
+          <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Tài khoản mẫu (Mật khẩu: 123456):
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+              {[
+                { label: '📅 Lễ tân (receptionist)', user: 'receptionist' },
+                { label: '🪑 Phục vụ (phucvu01)', user: 'phucvu01' },
+                { label: '🍳 Bếp (bep01)', user: 'bep01' },
+                { label: '💰 Thu ngân (thungan01)', user: 'thungan01' },
+                { label: '👑 Admin (admin)', user: 'admin' },
+              ].map(acc => (
+                <button
+                  key={acc.user}
+                  type="button"
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#334155',
+                    transition: 'all 0.15s'
+                  }}
+                  onClick={() => setFormData({ username: acc.user, password: '123456' })}
+                >
+                  {acc.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
 
         {message && (

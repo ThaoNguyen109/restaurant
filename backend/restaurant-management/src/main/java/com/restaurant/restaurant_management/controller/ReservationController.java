@@ -101,4 +101,14 @@ public class ReservationController {
     public ResponseEntity<Map<String, Long>> countToday() {
         return ResponseEntity.ok(Map.of("count", reservationService.countTodayReservations()));
     }
+
+    /**
+     * POST /api/reservations/test-notify
+     * Endpoint kiểm tra gửi chuông realtime qua WebSocket từ server
+     */
+    @PostMapping("/test-notify")
+    public ResponseEntity<Map<String, String>> testNotify() {
+        reservationService.sendTestNotification();
+        return ResponseEntity.ok(Map.of("message", "Đã gửi WebSocket event thử nghiệm tới /topic/reservations"));
+    }
 }
