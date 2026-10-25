@@ -239,6 +239,7 @@
 .cashier-status-pill.PENDING   { background: #fff3e0; color: #e65100; }
 .cashier-status-pill.PREPARING { background: #fce4ec; color: #c2185b; }
 .cashier-status-pill.SERVING   { background: #e8f5e9; color: #2e7d32; }
+.cashier-status-pill.BILLING_REQUESTED { background: #f3e8ff; color: #7e22ce; font-weight: 900; }
 
 /* ── Right Pane ────────────────────────────────────────────────── */
 .cashier-right-pane {
@@ -353,21 +354,31 @@
 }
 
 .cashier-method-btn {
-  padding: 10px;
+  padding: 10px 4px;
   border-radius: 10px;
   border: 1.5px solid #cbd5e1;
   background: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #334155;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 
 .cashier-method-btn.active {
   border-color: #2a4736;
   background: #2a4736;
+  color: #ffffff;
+}
+
+.cashier-method-btn.active.vnpay-btn-active {
+  border-color: #0284c7;
+  background: #0284c7;
   color: #ffffff;
 }
 
@@ -418,13 +429,120 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .cashier-qr-img {
-  width: 130px;
-  height: 130px;
+  width: 150px;
+  height: 150px;
   border-radius: 8px;
+  object-fit: contain;
+  background: #f8fafc;
+}
+
+/* VNPay Box */
+.cashier-vnpay-box {
+  background: #f0f9ff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cashier-vnpay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cashier-vnpay-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.cashier-vnpay-card-info {
+  background: #ffffff;
+  border: 1px dashed #7dd3fc;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 0.78rem;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cashier-vnpay-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cashier-vnpay-card-row strong {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.cashier-copy-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.cashier-copy-btn:hover {
+  background: #e2e8f0;
+}
+
+.cashier-vnpay-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.cashier-vnpay-open-btn {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+}
+
+.cashier-vnpay-open-btn:hover {
+  background: linear-gradient(135deg, #0369a1, #075985);
+  transform: translateY(-1px);
+}
+
+.cashier-vnpay-tab-btn {
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1.5px solid #0284c7;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cashier-vnpay-tab-btn:hover {
+  background: #f0f9ff;
 }
 
 .cashier-actions {
@@ -521,3 +639,159 @@
 .ord-bill-items td { padding: 4px 0; }
 .ord-bill-footer { border-top: 1px dashed #000; padding-top: 8px; }
 .ord-bill-total-row { display: flex; justify-content: space-between; font-weight: 900; font-size: 1rem; }
+
+/* ── Paid Order Summary Box ─────────────────────────────────────── */
+.cashier-paid-summary-box {
+  background: #f0fdf4;
+  border-radius: 16px;
+  border: 1.5px solid #86efac;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 14px rgba(22, 101, 52, 0.06);
+}
+
+.cashier-paid-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #dcfce7;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+}
+
+.cashier-paid-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.cashier-paid-method-tag {
+  background: #e2e8f0;
+  color: #1e293b;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.cashier-cash-summary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #bbf7d0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cashier-paid-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cashier-print-now-btn {
+  width: 100%;
+  padding: 14px;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+  transition: all 0.2s;
+}
+
+.cashier-print-now-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.cashier-preview-btn {
+  width: 100%;
+  padding: 10px;
+  background: #ffffff;
+  color: #166534;
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cashier-preview-btn:hover {
+  background: #dcfce7;
+}
+
+.cashier-next-order-btn {
+  width: 100%;
+  padding: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cashier-next-order-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* ── Print Styles ───────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-bill,
+  #printable-bill * {
+    visibility: visible;
+  }
+  #printable-bill {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .cashier-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+  .cashier-modal-box {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}

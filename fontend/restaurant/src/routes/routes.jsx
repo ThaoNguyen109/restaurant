@@ -16,6 +16,7 @@ import CashierPage from '../pages/staff/CashierPage'
 import CustomerPage from '../pages/customer/CustomerPage'
 import CustomerMenuPage from '../pages/customer/CustomerMenuPage'
 import StaffReservationsPage from '../pages/staff/StaffReservationsPage'
+import VNPayReturnPage from '../pages/payment/VNPayReturnPage'
 import ProtectedRoute from '../components/ProtectedRoute'
 
 export const router = createBrowserRouter([
@@ -23,6 +24,12 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Login />,
+  },
+
+  // ── Kết quả thanh toán VNPay (public) ─────────────────────────────
+  {
+    path: '/payment/vnpay-return',
+    element: <VNPayReturnPage />,
   },
 
   // ── Trang khách hàng (public – không cần đăng nhập) ──────────────

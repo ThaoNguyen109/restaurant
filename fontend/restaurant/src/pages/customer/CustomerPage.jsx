@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './CustomerPage.css'
 import { createReservation } from '../../services/reservationService'
+import CustomerChatBox from '../../components/customer/CustomerChatBox'
 
 /* ── Helpers ── */
 function scrollToSection(id) {
@@ -25,8 +26,8 @@ function Navbar() {
   return (
     <nav className={`cp-navbar${scrolled ? ' scrolled' : ''}`} id="cp-navbar">
       <Link to="/customer" className="cp-nav-logo">
-        <div className="cp-nav-logo-icon">🍜</div>
-        <span className="cp-nav-logo-text">Nhà Hàng Hoa Sen</span>
+        <div className="cp-nav-logo-icon">HS</div>
+        <span className="cp-nav-logo-text">Hoa Sen</span>
       </Link>
 
       <ul className={`cp-nav-links ${menuOpen ? 'open' : ''}`}>
@@ -41,8 +42,8 @@ function Navbar() {
           </a>
         </li>
         <li>
-          <Link to="/menu" onClick={() => setMenuOpen(false)} style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-            📖 Thực đơn
+          <Link to="/customer/menu" onClick={() => setMenuOpen(false)} className="cp-nav-menu-link">
+            Thực đơn
           </Link>
         </li>
         <li>
@@ -51,7 +52,7 @@ function Navbar() {
             onClick={(e) => { e.preventDefault(); setMenuOpen(false); scrollToSection('reservation') }}
             className="cp-nav-cta"
           >
-            🗓 Đặt bàn
+            Đặt bàn
           </a>
         </li>
       </ul>
@@ -94,10 +95,11 @@ function HeroSection() {
         </p>
         <div className="cp-hero-actions">
           <button className="cp-btn-primary" id="cp-hero-book-btn" onClick={() => scrollToSection('reservation')}>
-            🗓 Đặt Bàn Ngay
+            Đặt Bàn Ngay
           </button>
-          <button className="cp-btn-secondary" id="cp-hero-menu-btn" onClick={() => navigate('/menu')}>
-            📖 Khám Phá Thực Đơn →
+          <button className="cp-btn-secondary" id="cp-hero-menu-btn" onClick={() => navigate('/customer/menu')}>
+            Khám Phá Thực Đơn
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
       </div>
@@ -116,7 +118,7 @@ function StatsBar() {
     { number: '14+', label: 'Năm hoạt động' },
     { number: '100+', label: 'Món ăn đặc sắc' },
     { number: '50K+', label: 'Khách hàng hài lòng' },
-    { number: '4.9★', label: 'Đánh giá trung bình' },
+    { number: '4.9', label: 'Đánh giá trung bình' },
   ]
 
   return (
@@ -136,10 +138,10 @@ function StatsBar() {
 ════════════════════════════════ */
 function AboutSection() {
   const features = [
-    { icon: '🌿', title: 'Nguyên liệu tươi', desc: 'Chọn lọc mỗi buổi sáng từ các nhà cung cấp uy tín nhất' },
-    { icon: '👨‍🍳', title: 'Đầu bếp 5 sao', desc: 'Đội ngũ đầu bếp tâm huyết hơn 15 năm kinh nghiệm ẩm thực' },
-    { icon: '🏡', title: 'Không gian riêng tư', desc: 'Phòng VIP sang trọng và không gian lý tưởng cho mọi dịp' },
-    { icon: '🎵', title: 'Âm nhạc sống', desc: 'Biểu diễn nhạc truyền thống mỗi tối từ 18:00 - 21:00' },
+    { title: 'Nguyên liệu tươi', desc: 'Chọn lọc mỗi buổi sáng từ các nhà cung cấp uy tín nhất' },
+    { title: 'Đầu bếp 5 sao', desc: 'Đội ngũ đầu bếp tâm huyết hơn 15 năm kinh nghiệm ẩm thực' },
+    { title: 'Không gian riêng tư', desc: 'Phòng VIP sang trọng và không gian lý tưởng cho mọi dịp' },
+    { title: 'Âm nhạc sống', desc: 'Biểu diễn nhạc truyền thống mỗi tối từ 18:00 - 21:00' },
   ]
 
   return (
@@ -163,7 +165,7 @@ function AboutSection() {
           <div className="cp-about-features">
             {features.map((f, i) => (
               <div className="cp-feature-card" key={i}>
-                <div className="cp-feature-icon">{f.icon}</div>
+                <div className="cp-feature-index">{String(i + 1).padStart(2, '0')}</div>
                 <h4>{f.title}</h4>
                 <p>{f.desc}</p>
               </div>
@@ -191,16 +193,16 @@ function AboutSection() {
 }
 
 /* ════════════════════════════════
-   MENU CTA SECTION (ĐẸP, KHÔNG TẢI API)
+   MENU CTA SECTION
 ════════════════════════════════ */
 function MenuCTASection() {
   const navigate = useNavigate()
 
   const highlights = [
-    { icon: '🍜', name: 'Phở Bò Đặc Biệt', cat: 'Món chính' },
-    { icon: '🥗', name: 'Gỏi Cuốn Tôm Thịt', cat: 'Khai vị' },
-    { icon: '🍲', name: 'Lẩu Thái Hải Sản', cat: 'Đặc biệt' },
-    { icon: '🍵', name: 'Trà Hoa Sen Đặc Biệt', cat: 'Đồ uống' },
+    { name: 'Phở Bò Đặc Biệt', cat: 'Món chính' },
+    { name: 'Gỏi Cuốn Tôm Thịt', cat: 'Khai vị' },
+    { name: 'Lẩu Thái Hải Sản', cat: 'Đặc biệt' },
+    { name: 'Trà Hoa Sen Đặc Biệt', cat: 'Đồ uống' },
   ]
 
   return (
@@ -228,10 +230,11 @@ function MenuCTASection() {
           <button
             className="cp-btn-primary"
             style={{ marginTop: '32px', padding: '14px 40px', fontSize: '15px' }}
-            onClick={() => navigate('/menu')}
+            onClick={() => navigate('/customer/menu')}
             id="cp-menu-cta-btn"
           >
-            📖 Xem Toàn Bộ Thực Đơn →
+            Xem Toàn Bộ Thực Đơn
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
 
@@ -242,14 +245,16 @@ function MenuCTASection() {
               key={h.name}
               className="cp-menu-cta-card"
               style={{ '--delay': `${i * 0.1}s` }}
-              onClick={() => navigate('/menu')}
+              onClick={() => navigate('/customer/menu')}
             >
-              <span className="cp-menu-cta-card-icon">{h.icon}</span>
+              <div className="cp-menu-cta-card-num">{String(i + 1).padStart(2, '0')}</div>
               <div>
                 <p className="cp-menu-cta-card-name">{h.name}</p>
                 <small className="cp-menu-cta-card-cat">{h.cat}</small>
               </div>
-              <span className="cp-menu-cta-card-arrow">→</span>
+              <span className="cp-menu-cta-card-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </span>
             </div>
           ))}
           <div className="cp-menu-cta-badge">
@@ -383,7 +388,9 @@ function ReservationSection() {
 
         {bookingSuccess ? (
           <div className="cp-reservation-success-card">
-            <div className="cp-success-icon">🎉</div>
+            <div className="cp-success-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
             <h3>Đặt Bàn Thành Công!</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
               Cảm ơn quý khách <strong>{bookingSuccess.customerName}</strong> đã lựa chọn Nhà Hàng Hoa Sen.
@@ -418,14 +425,14 @@ function ReservationSection() {
             </p>
 
             <button type="button" className="cp-btn-primary" onClick={handleReset}>
-              ✨ Đặt thêm bàn khác
+              Đặt thêm bàn khác
             </button>
           </div>
         ) : (
           <form className="cp-reservation-form" onSubmit={handleSubmit}>
             {errorMsg && (
               <div className="cp-alert-error">
-                <span>⚠️</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <span>{errorMsg}</span>
               </div>
             )}
@@ -534,7 +541,7 @@ function ReservationSection() {
             </div>
 
             <button type="submit" className="cp-btn-primary cp-btn-full" disabled={submitting}>
-              {submitting ? '⏳ Đang gửi thông tin...' : '✨ Xác Nhận Đặt Bàn Ngay'}
+              {submitting ? 'Đang gửi thông tin...' : 'Xác Nhận Đặt Bàn Ngay'}
             </button>
           </form>
         )}
@@ -552,7 +559,7 @@ function Footer() {
       <div className="cp-footer-grid">
         <div className="cp-footer-brand">
           <div className="cp-nav-logo">
-            <div className="cp-nav-logo-icon">🍜</div>
+            <div className="cp-nav-logo-icon">HS</div>
             <span className="cp-nav-logo-text">Hoa Sen Restaurant</span>
           </div>
           <p>Trải nghiệm tinh hoa ẩm thực Việt Nam trong không gian kiến trúc sang trọng và ấm cúng.</p>
@@ -561,20 +568,20 @@ function Footer() {
         <div className="cp-footer-col">
           <h4>Thực đơn</h4>
           <ul>
-            <li><Link to="/menu">Xem toàn bộ thực đơn</Link></li>
-            <li><Link to="/menu">Món khai vị</Link></li>
-            <li><Link to="/menu">Món chính & Lẩu</Link></li>
-            <li><Link to="/menu">Đồ uống & Tráng miệng</Link></li>
+            <li><Link to="/customer/menu">Xem toàn bộ thực đơn</Link></li>
+            <li><Link to="/customer/menu">Món khai vị</Link></li>
+            <li><Link to="/customer/menu">Món chính & Lẩu</Link></li>
+            <li><Link to="/customer/menu">Đồ uống & Tráng miệng</Link></li>
           </ul>
         </div>
 
         <div className="cp-footer-col">
           <h4>Liên hệ</h4>
           <address>
-            📍 Trung tâm TP. Hồ Chí Minh<br />
-            📞 (028) 3822 1234<br />
-            ✉️ contact@hoasen.restaurant<br />
-            🕐 10:00 – 22:30 hàng ngày
+            Trung tâm TP. Hồ Chí Minh<br />
+            (028) 3822 1234<br />
+            contact@hoasen.restaurant<br />
+            10:00 – 22:30 hàng ngày
           </address>
         </div>
       </div>
@@ -601,6 +608,7 @@ export default function CustomerPage() {
         <ReservationSection />
       </main>
       <Footer />
+      <CustomerChatBox />
     </div>
   )
 }

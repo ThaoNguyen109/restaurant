@@ -255,9 +255,13 @@ public class OrderService {
                 table.setStatus("AVAILABLE");
                 restaurantTableRepository.save(table);
             }
-        } else if (List.of("CONFIRMED", "PREPARING", "SERVING", "PENDING").contains(newStatus) && order.getTable() != null) {
+        } else if (List.of("CONFIRMED", "PREPARING", "SERVING", "PENDING", "BILLING_REQUESTED").contains(newStatus) && order.getTable() != null) {
             RestaurantTable table = order.getTable();
-            table.setStatus("OCCUPIED");
+            if ("BILLING_REQUESTED".equals(newStatus)) {
+                table.setStatus("BILLING_REQUESTED");
+            } else {
+                table.setStatus("OCCUPIED");
+            }
             restaurantTableRepository.save(table);
         }
 

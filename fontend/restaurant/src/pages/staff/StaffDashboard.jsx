@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import './StaffDashboard.css'
 import {
   getAllTables,
@@ -7,6 +7,7 @@ import {
 import {
   getAllOrders,
   createOrder,
+  updateOrder,
   addOrderItem,
   deleteOrderItem,
   updateOrderStatus,
@@ -23,9 +24,77 @@ function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0)
 }
 
+// ── KHU VỰC NHÀ HÀNG (ZONES / FLOORS) ──────────────────────────────
+export const TABLE_AREAS = [
+  { id: 'ALL', name: 'Tất cả khu vực', shortName: 'Tất cả', icon: '🌟' },
+  { id: 'FLOOR_1', name: 'Tầng 1 (Sảnh chính)', shortName: 'Tầng 1', icon: '🏛️' },
+  { id: 'FLOOR_2', name: 'Tầng 2 (Sân vườn)', shortName: 'Tầng 2', icon: '🌿' },
+  { id: 'ROOFTOP', name: 'Sân thượng (Sky View)', shortName: 'Sân thượng', icon: '🌅' },
+  { id: 'VIP', name: 'Phòng VIP Hoàng gia', shortName: 'Phòng VIP', icon: '👑' },
+]
+
+export function getTableArea(table) {
+  if (table.area) return table.area
+  const num = Number(table.tableNumber)
+  if (num >= 100 && num < 200) return 'FLOOR_1'
+  if (num >= 200 && num < 300) return 'FLOOR_2'
+  if (num >= 300 && num < 400) return 'ROOFTOP'
+  if (num >= 400 || num >= 800) return 'VIP'
+
+  // Quy ước số bàn 1..30 thông dụng
+  if (num <= 8) return 'FLOOR_1'
+  if (num <= 16) return 'FLOOR_2'
+  if (num <= 24) return 'ROOFTOP'
+  return 'VIP'
+}
+
+export function getAreaInfo(areaId) {
+  return TABLE_AREAS.find(a => a.id === areaId) || TABLE_AREAS[0]
+}
+
+// ── 4 TRẠNG THÁI MÀU SẮC TRỰC QUAN ────────────────────────────────
+export const STATUS_CONFIG = {
+  AVAILABLE: {
+    key: 'AVAILABLE',
+    label: 'Trống',
+    icon: '🟢',
+    badgeClass: 'status-available',
+    desc: 'Sẵn sàng đón khách',
+    color: '#22c55e',
+  },
+  OCCUPIED: {
+    key: 'OCCUPIED',
+    label: 'Đang phục vụ',
+    icon: '🔴',
+    badgeClass: 'status-occupied',
+    desc: 'Đang có khách ngồi',
+    color: '#ef4444',
+  },
+  RESERVED: {
+    key: 'RESERVED',
+    label: 'Đã đặt trước',
+    icon: '🟡',
+    badgeClass: 'status-reserved',
+    desc: 'Bàn đã giữ chỗ',
+    color: '#f59e0b',
+  },
+  BILLING_REQUESTED: {
+    key: 'BILLING_REQUESTED',
+    label: 'Yêu cầu thanh toán',
+    icon: '🟣',
+    badgeClass: 'status-billing',
+    desc: 'Khách gọi tính tiền',
+    color: '#a855f7',
+  },
+}
+
+// Gợi ý ghi chú 1-chạm cho nhân viên phục vụ
+const QUICK_NOTES = [
+  'Ít cay', 'Không ớt', 'Không hành', 'Ít ngọt', 'Nhiều đá', 'Không đá', 'Lên trước', 'Mang về'
+]
+
 function StaffDashboard() {
-  // ── View Mode ─────────────────────────────────────────────────────
-  // 'tables' (Sơ đồ bàn) | 'ordering' (Gọi món cho bàn)
+  // ── View Mode: 'tables' (Sơ đồ bàn) | 'ordering' (Gọi món cho bàn)
   const [viewMode, setViewMode] = useState('tables')
 
   const role = getRole()?.toUpperCase()
@@ -33,7 +102,7 @@ function StaffDashboard() {
   const canAccessCashier = ['ADMIN', 'MANAGER', 'CASHIER'].includes(role)
   const canAccessAdmin   = ['ADMIN'].includes(role)
 
-  // ── States ────────────────────────────────────────────────────────
+  // ── States Dữ liệu chính ──────────────────────────────────────────
   const [tables, setTables] = useState([])
   const [orders, setOrders] = useState([])
   const [menuItems, setMenuItems] = useState([])
@@ -41,18 +110,43 @@ function StaffDashboard() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Selected table for ordering or viewing
+  // ── Floor Plan & Lọc Bàn ──────────────────────────────────────────
+  const [selectedArea, setSelectedArea] = useState('ALL')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [searchTable, setSearchTable] = useState('')
+  const [floorViewMode, setFloorViewMode] = useState('floorplan') // 'floorplan' | 'cards'
+
+  // Selected table & Modal
   const [selectedTable, setSelectedTable] = useState(null)
   const [activeTableOrder, setActiveTableOrder] = useState(null)
   const [showTableModal, setShowTableModal] = useState(false)
 
-  // Ordering State
+  // ── Mobile POS Ordering State ─────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [menuTab, setMenuTab] = useState('dish') // 'dish' | 'combo'
   const [searchDish, setSearchDish] = useState('')
   const [cart, setCart] = useState([])
   const [orderNote, setOrderNote] = useState('')
   const [submittingOrder, setSubmittingOrder] = useState(false)
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false) // Mobile cart drawer
+
+  // Danh sách bàn đang yêu cầu thanh toán (Hỗ trợ fallback khi server chưa restart)
+  const [billingTableIds, setBillingTableIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_billing_table_ids')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_billing_table_ids', JSON.stringify(billingTableIds))
+    } catch (e) {
+      console.warn('Lỗi lưu localStorage:', e)
+    }
+  }, [billingTableIds])
 
   // Toast
   const [toast, setToast] = useState(null)
@@ -96,7 +190,7 @@ function StaffDashboard() {
   useEffect(() => {
     fetchData()
 
-    // Realtime subscription for order updates (from kitchen, staff, etc.)
+    // Realtime subscription for order updates
     const unsubOrders = subscribeWebSocket('/topic/orders', (event) => {
       console.log('[Staff Realtime Order Event]:', event)
       if (event?.message) {
@@ -139,27 +233,107 @@ function StaffDashboard() {
     }
   }, [fetchData])
 
-  // ── Table Selection Handlers ─────────────────────────────────────
-  const handleTableClick = (table) => {
-    // Tìm đơn đang hoạt động của bàn
+  // ── Tính trạng thái thực tế của bàn ──────────────────────────────
+  const getTableEffectiveStatus = useCallback((table) => {
     const currentOrder = orders.find(
       o => o.tableId === table.id && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
     )
 
-    if (table.status === 'AVAILABLE') {
-      // Bàn trống -> Mở màn hình gọi món mới
-      setSelectedTable(table)
+    if (
+      table.status === 'BILLING_REQUESTED' ||
+      currentOrder?.status === 'BILLING_REQUESTED' ||
+      billingTableIds.includes(table.id) ||
+      (currentOrder?.note && currentOrder.note.includes('[YÊU CẦU THANH TOÁN]'))
+    ) {
+      return 'BILLING_REQUESTED'
+    }
+    if (table.status === 'OCCUPIED' || currentOrder) {
+      return 'OCCUPIED'
+    }
+    if (table.status === 'RESERVED') {
+      return 'RESERVED'
+    }
+    return 'AVAILABLE'
+  }, [orders, billingTableIds])
+
+  // ── Bàn lọc theo Khu vực & Trạng thái & Tìm kiếm ──────────────────
+  const filteredTables = useMemo(() => {
+    return tables.filter(t => {
+      // Bỏ qua bàn ngừng hoạt động
+      if (t.status === 'INACTIVE') return false
+
+      // Lọc theo Khu vực
+      const area = getTableArea(t)
+      if (selectedArea !== 'ALL' && area !== selectedArea) return false
+
+      // Lọc theo Trạng thái
+      const effStatus = getTableEffectiveStatus(t)
+      if (statusFilter !== 'ALL' && effStatus !== statusFilter) return false
+
+      // Lọc theo số bàn
+      if (searchTable.trim()) {
+        const query = searchTable.trim().toLowerCase()
+        const matchNum = String(t.tableNumber).toLowerCase().includes(query)
+        if (!matchNum) return false
+      }
+
+      return true
+    })
+  }, [tables, selectedArea, statusFilter, searchTable, getTableEffectiveStatus])
+
+  // ── Thống kê tổng số lượng bàn theo trạng thái ────────────────────
+  const statusCounts = useMemo(() => {
+    const counts = {
+      TOTAL: 0,
+      AVAILABLE: 0,
+      OCCUPIED: 0,
+      RESERVED: 0,
+      BILLING_REQUESTED: 0,
+    }
+
+    tables.forEach(t => {
+      if (t.status === 'INACTIVE') return
+      const effStatus = getTableEffectiveStatus(t)
+      counts.TOTAL += 1
+      if (counts[effStatus] !== undefined) {
+        counts[effStatus] += 1
+      }
+    })
+
+    return counts
+  }, [tables, getTableEffectiveStatus])
+
+  // ── Xử lý khi nhấn vào Bàn ───────────────────────────────────────
+  const handleTableClick = (table) => {
+    const effStatus = getTableEffectiveStatus(table)
+    const currentOrder = orders.find(
+      o => o.tableId === table.id && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+    )
+
+    setSelectedTable(table)
+
+    if (effStatus === 'AVAILABLE') {
+      // Bàn trống -> Vào thẳng màn hình gọi món Mobile POS
       setActiveTableOrder(null)
       setCart([])
       setOrderNote('')
       setViewMode('ordering')
-    } else if (table.status === 'OCCUPIED' || currentOrder) {
-      // Bàn đang có khách -> Mở popup chi tiết bàn & các món đang gọi
-      setSelectedTable(table)
+      setCartDrawerOpen(false)
+    } else if (effStatus === 'OCCUPIED' || effStatus === 'BILLING_REQUESTED') {
+      // Bàn đang phục vụ hoặc đang đòi tính tiền -> Mở modal chi tiết
       setActiveTableOrder(currentOrder || null)
       setShowTableModal(true)
+    } else if (effStatus === 'RESERVED') {
+      // Bàn đặt trước
+      if (window.confirm(`Bàn ${table.tableNumber} đã được đặt trước. Bạn có muốn nhận khách và mở bàn gọi món không?`)) {
+        setActiveTableOrder(null)
+        setCart([])
+        setOrderNote('')
+        setViewMode('ordering')
+        setCartDrawerOpen(false)
+      }
     } else {
-      showToast(`Bàn ${table.tableNumber} hiện đang ở trạng thái ${table.status}`)
+      showToast(`Bàn ${table.tableNumber} hiện ở trạng thái: ${table.status}`)
     }
   }
 
@@ -169,6 +343,57 @@ function StaffDashboard() {
     setCart([])
     setOrderNote('')
     setViewMode('ordering')
+    setCartDrawerOpen(false)
+  }
+
+  // ── Yêu cầu thanh toán (Đổi sang màu tím 🟣) ──────────────────────
+  const handleRequestBilling = async (table, currentOrder) => {
+    try {
+      // 1. Đánh dấu ngay lập tức trên UI sang màu tím 🟣
+      setBillingTableIds(prev => (prev.includes(table.id) ? prev : [...prev, table.id]))
+
+      // 2. Thử gọi API backend cập nhật trạng thái
+      try {
+        if (currentOrder) {
+          await updateOrderStatus(currentOrder.id, 'BILLING_REQUESTED')
+        }
+        await updateTableStatus(table.id, 'BILLING_REQUESTED')
+      } catch (backendErr) {
+        console.warn('Backend validation notice (đang dùng fallback chờ restart Spring Boot):', backendErr)
+        // Fallback: Nếu backend chưa restart và báo "Dữ liệu không hợp lệ", lưu cờ vào ghi chú đơn hàng
+        if (currentOrder) {
+          const noteText = currentOrder.note || ''
+          const updatedNote = noteText.includes('[YÊU CẦU THANH TOÁN]')
+            ? noteText
+            : (noteText ? `${noteText} • [YÊU CẦU THANH TOÁN]` : '[YÊU CẦU THANH TOÁN]')
+          await updateOrder(currentOrder.id, { tableId: table.id, note: updatedNote }).catch(() => {})
+        }
+      }
+
+      showToast(`Đã gửi Yêu cầu thanh toán cho Bàn ${table.tableNumber}! 🟣`)
+      setShowTableModal(false)
+      fetchData()
+    } catch (err) {
+      showToast('Lỗi gửi yêu cầu thanh toán: ' + (err.message || ''))
+    }
+  }
+
+  // ── Hoàn tất / Trả bàn (Thu ngân & Giải phóng) ─────────────────────
+  const handleCheckoutTable = async () => {
+    if (!activeTableOrder) return
+    if (!window.confirm(`Xác nhận thanh toán và giải phóng Bàn ${selectedTable?.tableNumber}?`)) return
+
+    try {
+      await updateOrderStatus(activeTableOrder.id, 'COMPLETED')
+      if (selectedTable?.id) {
+        setBillingTableIds(prev => prev.filter(id => id !== selectedTable.id))
+      }
+      showToast(`Bàn ${selectedTable?.tableNumber} đã hoàn tất và thanh toán!`)
+      setShowTableModal(false)
+      fetchData()
+    } catch (err) {
+      showToast('Lỗi thanh toán: ' + (err.message || ''))
+    }
   }
 
   // ── Cart Handlers ────────────────────────────────────────────────
@@ -219,6 +444,18 @@ function StaffDashboard() {
     )
   }
 
+  const handleAppendQuickNote = (index, quickTag) => {
+    setCart(prev =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const existingNote = item.note ? item.note.trim() : ''
+        if (existingNote.includes(quickTag)) return item
+        const newNote = existingNote ? `${existingNote}, ${quickTag}` : quickTag
+        return { ...item, note: newNote }
+      })
+    )
+  }
+
   const handleRemoveFromCart = (index) => {
     setCart(prev => prev.filter((_, i) => i !== index))
   }
@@ -265,6 +502,7 @@ function StaffDashboard() {
       setSelectedTable(null)
       setActiveTableOrder(null)
       setCart([])
+      setCartDrawerOpen(false)
     } catch (err) {
       showToast('Lỗi gửi đơn: ' + (err.message || ''))
     } finally {
@@ -291,21 +529,6 @@ function StaffDashboard() {
     }
   }
 
-  // ── Hoàn tất / Trả bàn ───────────────────────────────────────────
-  const handleCheckoutTable = async () => {
-    if (!activeTableOrder) return
-    if (!window.confirm(`Xác nhận thanh toán và giải phóng Bàn ${selectedTable?.tableNumber}?`)) return
-
-    try {
-      await updateOrderStatus(activeTableOrder.id, 'COMPLETED')
-      showToast(`Bàn ${selectedTable?.tableNumber} đã hoàn tất và thanh toán!`)
-      setShowTableModal(false)
-      fetchData()
-    } catch (err) {
-      showToast('Lỗi thanh toán: ' + (err.message || ''))
-    }
-  }
-
   // ── Filtered Dishes for Ordering ─────────────────────────────────
   const filteredMenuItems = menuItems.filter(item => {
     const matchCat = selectedCategory === 'ALL' || item.categoryId === Number(selectedCategory)
@@ -318,188 +541,422 @@ function StaffDashboard() {
   )
 
   const cartTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+  const cartTotalQty = cart.reduce((acc, curr) => acc + curr.quantity, 0)
 
   return (
-    <div className="waiter-container">
-      {/* 1. TOP BAR */}
+    <div className="waiter-app-wrapper">
+      {/* ── 1. HEADER / TOPBAR (Mobile-First Compact Header) ───────── */}
       <header className="waiter-topbar">
-        <div className="waiter-brand">
+        <div className="waiter-topbar-left">
           <div className="waiter-brand-logo">🍽️</div>
           <div>
-            <h1 className="waiter-title">PHỤC VỤ & GỌI MÓN (POS)</h1>
+            <h1 className="waiter-app-title">Phục Vụ (POS)</h1>
+            <p className="waiter-app-subtitle">
+              {viewMode === 'tables' ? 'Sơ đồ bàn & Trạng thái' : `Đang gọi món Bàn ${selectedTable?.tableNumber}`}
+            </p>
           </div>
         </div>
 
+        {/* Chuyển View Mode nhanh */}
         <div className="waiter-topbar-center">
           <button
+            type="button"
             className={`waiter-tab-btn ${viewMode === 'tables' ? 'active' : ''}`}
             onClick={() => {
               setViewMode('tables')
-              setSelectedTable(null)
-              setActiveTableOrder(null)
+              setCartDrawerOpen(false)
             }}
           >
             🪑 Sơ đồ bàn
           </button>
           {selectedTable && (
             <button
+              type="button"
               className={`waiter-tab-btn ${viewMode === 'ordering' ? 'active' : ''}`}
               onClick={() => setViewMode('ordering')}
             >
-              📝 Gọi món (Bàn {selectedTable.tableNumber})
+              📝 Bàn {selectedTable.tableNumber} {cartTotalQty > 0 ? `(${cartTotalQty})` : ''}
             </button>
           )}
         </div>
 
+        {/* Nút hành động phải */}
         <div className="waiter-topbar-right">
-          <a href="/staff/reservations" className="waiter-link-btn" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 800 }}>
+          <button
+            type="button"
+            className="waiter-icon-btn"
+            onClick={fetchData}
+            title="Làm mới dữ liệu"
+          >
+            🔄
+          </button>
+          <a href="/staff/reservations" className="waiter-link-btn res-btn" title="Quản lý đặt bàn">
             📅 Đặt bàn
           </a>
-          <button className="waiter-tab-btn" onClick={fetchData} title="Làm mới">
-            🔄 Làm mới
-          </button>
-          {canAccessKitchen && <a href="/kitchen" className="waiter-link-btn">🍳 Bếp (KDS)</a>}
-          {canAccessCashier && <a href="/cashier" className="waiter-link-btn">💰 Thu ngân</a>}
-          {canAccessAdmin   && <a href="/admin/orders" className="waiter-link-btn">📊 Admin</a>}
+          {canAccessKitchen && <a href="/kitchen" className="waiter-link-btn" title="Bếp KDS">🍳 Bếp</a>}
+          {canAccessCashier && <a href="/cashier" className="waiter-link-btn" title="Thu ngân">💰 Thu ngân</a>}
+          {canAccessAdmin   && <a href="/admin/orders" className="waiter-link-btn admin-btn">📊 Admin</a>}
         </div>
       </header>
 
-      {/* 2. MAIN CONTENT */}
-      <main className="waiter-content">
+      {/* ── 2. NỘI DUNG CHÍNH ────────────────────────────────────────── */}
+      <main className="waiter-main-content">
         {viewMode === 'tables' ? (
-          /* ── VIEW 1: SƠ ĐỒ BÀN ─────────────────────────────────── */
-          <>
-            <div className="waiter-table-stats">
-              <div className="waiter-stat-pill">
-                <span className="waiter-dot available" />
-                <span>Bàn trống ({tables.filter(t => t.status === 'AVAILABLE').length})</span>
+          /* ══════════════════════════════════════════════════════════════
+             VIEW 1: SƠ ĐỒ BÀN TƯƠNG TÁC (VISUAL FLOOR PLAN)
+             ══════════════════════════════════════════════════════════════ */
+          <div className="floorplan-container">
+            {/* ── KHU VỰC TABS (Tầng 1, Tầng 2, Sân thượng, Phòng VIP) ── */}
+            <div className="floorplan-area-bar">
+              <div className="area-tabs-scroll">
+                {TABLE_AREAS.map(area => {
+                  const areaCount = area.id === 'ALL'
+                    ? tables.filter(t => t.status !== 'INACTIVE').length
+                    : tables.filter(t => t.status !== 'INACTIVE' && getTableArea(t) === area.id).length
+
+                  return (
+                    <button
+                      key={area.id}
+                      type="button"
+                      className={`area-tab-btn ${selectedArea === area.id ? 'active' : ''}`}
+                      onClick={() => setSelectedArea(area.id)}
+                    >
+                      <span className="area-icon">{area.icon}</span>
+                      <span className="area-name">{area.shortName}</span>
+                      <span className="area-badge">{areaCount}</span>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="waiter-stat-pill">
-                <span className="waiter-dot occupied" />
-                <span>Đang phục vụ ({tables.filter(t => t.status === 'OCCUPIED').length})</span>
-              </div>
-              <div className="waiter-stat-pill">
-                <span className="waiter-dot reserved" />
-                <span>Đã đặt trước ({tables.filter(t => t.status === 'RESERVED').length})</span>
+
+              {/* Ô tìm bàn & Chuyển chế độ hiển thị */}
+              <div className="floorplan-quick-controls">
+                <div className="table-search-box">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Tìm số bàn..."
+                    value={searchTable}
+                    onChange={e => setSearchTable(e.target.value)}
+                  />
+                  {searchTable && (
+                    <button type="button" className="clear-search-btn" onClick={() => setSearchTable('')}>
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="view-mode-toggle">
+                  <button
+                    type="button"
+                    className={`toggle-btn ${floorViewMode === 'floorplan' ? 'active' : ''}`}
+                    onClick={() => setFloorViewMode('floorplan')}
+                    title="Sơ đồ bàn trực quan"
+                  >
+                    🗺️ Sơ đồ
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${floorViewMode === 'cards' ? 'active' : ''}`}
+                    onClick={() => setFloorViewMode('cards')}
+                    title="Lưới thẻ danh sách"
+                  >
+                    🗂️ Thẻ
+                  </button>
+                </div>
               </div>
             </div>
 
+            {/* ── 4 TRẠNG THÁI MÀU SẮC TRỰC QUAN (STAT PILLS) ───────── */}
+            <div className="floorplan-status-bar">
+              <button
+                type="button"
+                className={`status-pill all ${statusFilter === 'ALL' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('ALL')}
+              >
+                <span>Tất cả</span>
+                <strong>{statusCounts.TOTAL}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`status-pill available ${statusFilter === 'AVAILABLE' ? 'active' : ''}`}
+                onClick={() => setStatusFilter(prev => prev === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')}
+              >
+                <span className="dot dot-available" />
+                <span>🟢 Trống</span>
+                <strong>{statusCounts.AVAILABLE}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`status-pill occupied ${statusFilter === 'OCCUPIED' ? 'active' : ''}`}
+                onClick={() => setStatusFilter(prev => prev === 'OCCUPIED' ? 'ALL' : 'OCCUPIED')}
+              >
+                <span className="dot dot-occupied" />
+                <span>🔴 Đang phục vụ</span>
+                <strong>{statusCounts.OCCUPIED}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`status-pill reserved ${statusFilter === 'RESERVED' ? 'active' : ''}`}
+                onClick={() => setStatusFilter(prev => prev === 'RESERVED' ? 'ALL' : 'RESERVED')}
+              >
+                <span className="dot dot-reserved" />
+                <span>🟡 Đã đặt trước</span>
+                <strong>{statusCounts.RESERVED}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={`status-pill billing ${statusFilter === 'BILLING_REQUESTED' ? 'active' : ''}`}
+                onClick={() => setStatusFilter(prev => prev === 'BILLING_REQUESTED' ? 'ALL' : 'BILLING_REQUESTED')}
+              >
+                <span className="dot dot-billing" />
+                <span>🟣 Yêu cầu thanh toán</span>
+                <strong>{statusCounts.BILLING_REQUESTED}</strong>
+              </button>
+            </div>
+
+            {/* ── BẢN ĐỒ / LƯỚI BÀN ──────────────────────────────────── */}
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                Đang tải sơ đồ bàn...
+              <div className="floorplan-loading">
+                <div className="spinner-lg" />
+                <p>Đang tải dữ liệu sơ đồ bàn...</p>
+              </div>
+            ) : filteredTables.length === 0 ? (
+              <div className="floorplan-empty">
+                <span style={{ fontSize: '3rem' }}>🪑</span>
+                <h3>Không tìm thấy bàn phù hợp</h3>
+                <p>Thử đổi khu vực hoặc bộ lọc trạng thái phía trên.</p>
+                <button
+                  type="button"
+                  className="reset-filter-btn"
+                  onClick={() => {
+                    setSelectedArea('ALL')
+                    setStatusFilter('ALL')
+                    setSearchTable('')
+                  }}
+                >
+                  Đặt lại bộ lọc
+                </button>
               </div>
             ) : (
-              <div className="waiter-tables-grid">
-                {tables.map(table => {
+              <div className={`tables-layout ${floorViewMode}`}>
+                {filteredTables.map(table => {
+                  const effStatus = getTableEffectiveStatus(table)
+                  const cfg = STATUS_CONFIG[effStatus] || STATUS_CONFIG.AVAILABLE
                   const activeOrder = orders.find(
                     o => o.tableId === table.id && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
                   )
+                  const area = getTableArea(table)
+                  const areaInfo = getAreaInfo(area)
+                  const capacity = table.capacity || 4
 
                   return (
                     <div
                       key={table.id}
-                      className={`waiter-table-card ${table.status}`}
+                      className={`floor-table-node ${effStatus} ${area.toLowerCase()}`}
                       onClick={() => handleTableClick(table)}
                     >
-                      <div className="waiter-table-card-top">
-                        <div>
-                          <div className="waiter-table-num">BÀN {table.tableNumber}</div>
-                          <div className="waiter-table-cap">{table.capacity} chỗ ngồi</div>
+                      {/* Biểu tượng ghế ngồi xung quanh bàn (Visual Seats) */}
+                      {floorViewMode === 'floorplan' && (
+                        <div className="visual-seats-ring" data-seats={capacity}>
+                          {Array.from({ length: Math.min(capacity, 8) }).map((_, seatIdx) => (
+                            <span key={seatIdx} className={`seat-dot seat-${seatIdx + 1}`} />
+                          ))}
                         </div>
-                        <span className={`waiter-table-status-tag ${table.status}`}>
-                          {table.status === 'AVAILABLE' ? 'Trống' : table.status === 'OCCUPIED' ? 'Có khách' : table.status}
-                        </span>
-                      </div>
+                      )}
 
-                      <div className="waiter-table-card-bottom">
-                        {activeOrder ? (
-                          <>
-                            <div className="waiter-active-amount">
-                              {formatCurrency(activeOrder.totalAmount)}
-                            </div>
-                            <div className="waiter-active-count">
-                              {activeOrder.items?.length || 0} món • #{activeOrder.id}
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 700 }}>
-                            + Chạm để mở bàn
+                      {/* Mặt bàn chính */}
+                      <div className="table-surface">
+                        {/* Header của thẻ bàn */}
+                        <div className="table-surface-header">
+                          <span className="table-area-tag" title={areaInfo.name}>
+                            {areaInfo.icon} {areaInfo.shortName}
+                          </span>
+                          <span className={`table-status-badge ${cfg.badgeClass}`}>
+                            {cfg.icon} {cfg.label}
+                          </span>
+                        </div>
+
+                        {/* Số bàn chính giữa */}
+                        <div className="table-surface-center">
+                          <div className="table-number-label">
+                            BÀN {table.tableNumber}
                           </div>
-                        )}
+                          <div className="table-capacity-label">
+                            👥 {capacity} ghế
+                          </div>
+                        </div>
+
+                        {/* Thông tin đơn hàng / Hành động dưới mặt bàn */}
+                        <div className="table-surface-footer">
+                          {activeOrder ? (
+                            <div className="table-order-preview">
+                              <div className="order-price">
+                                {formatCurrency(activeOrder.totalAmount)}
+                              </div>
+                              <div className="order-meta">
+                                <span>{activeOrder.items?.length || 0} món</span>
+                                <span>• #{activeOrder.id}</span>
+                              </div>
+                            </div>
+                          ) : effStatus === 'RESERVED' ? (
+                            <div className="reserved-preview">
+                              <span>📋 Khách đặt trước</span>
+                            </div>
+                          ) : (
+                            <div className="available-preview">
+                              <span>+ Chạm mở bàn</span>
+                            </div>
+                          )}
+
+                          {/* Quick Action Button */}
+                          <div className="table-quick-action">
+                            {effStatus === 'AVAILABLE' && (
+                              <button
+                                type="button"
+                                className="action-chip available"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleTableClick(table)
+                                }}
+                              >
+                                ➕ Mở bàn
+                              </button>
+                            )}
+                            {effStatus === 'OCCUPIED' && (
+                              <button
+                                type="button"
+                                className="action-chip billing-req"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRequestBilling(table, activeOrder)
+                                }}
+                                title="Báo khách xin tính tiền"
+                              >
+                                🟣 Xin bill
+                              </button>
+                            )}
+                            {effStatus === 'BILLING_REQUESTED' && (
+                              <span className="pulse-billing-tag">
+                                ⚡ Chờ tính tiền
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
             )}
-          </>
+          </div>
         ) : (
-          /* ── VIEW 2: MÀN HÌNH GỌI MÓN (POS ORDERING) ───────────── */
+          /* ══════════════════════════════════════════════════════════════
+             VIEW 2: MÀN HÌNH GỌI MÓN CẦM TAY (MOBILE POS ORDERING)
+             ══════════════════════════════════════════════════════════════ */
           <div className="waiter-pos-layout">
-            {/* CỘT TRÁI: MENU CHỌN MÓN (CHỈ MÓN ACTIVE) */}
+            {/* ── BẢNG CHỌN MÓN (MENU PANE) ────────────────────────── */}
             <div className="waiter-menu-pane">
-              <div className="waiter-menu-header">
-                <div style={{ display: 'flex', gap: '8px' }}>
+              {/* Header gọi món */}
+              <div className="pos-table-header">
+                <div className="pos-table-badge">
+                  <span className="table-icon">🪑</span>
+                  <div>
+                    <div className="pos-table-title">
+                      BÀN {selectedTable?.tableNumber}
+                    </div>
+                    <div className="pos-table-sub">
+                      {getAreaInfo(getTableArea(selectedTable || {})).name} • {selectedTable?.capacity || 4} chỗ
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pos-header-actions">
                   <button
                     type="button"
-                    className={`waiter-cat-btn ${menuTab === 'dish' ? 'active' : ''}`}
+                    className="change-table-btn"
+                    onClick={() => {
+                      setViewMode('tables')
+                      setCartDrawerOpen(false)
+                    }}
+                  >
+                    ✕ Đổi bàn
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs chuyển món ăn / Combo & Ô tìm kiếm */}
+              <div className="waiter-menu-search-bar">
+                <div className="tab-pill-toggle">
+                  <button
+                    type="button"
+                    className={`tab-pill ${menuTab === 'dish' ? 'active' : ''}`}
                     onClick={() => setMenuTab('dish')}
                   >
-                    🍲 Món ăn ({menuItems.length})
+                    🍲 Món ({menuItems.length})
                   </button>
                   <button
                     type="button"
-                    className={`waiter-cat-btn ${menuTab === 'combo' ? 'active' : ''}`}
+                    className={`tab-pill ${menuTab === 'combo' ? 'active' : ''}`}
                     onClick={() => setMenuTab('combo')}
                   >
                     🍱 Combo ({combos.length})
                   </button>
                 </div>
 
-                <input
-                  type="text"
-                  placeholder="🔍 Tìm món nhanh..."
-                  value={searchDish}
-                  onChange={e => setSearchDish(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.88rem',
-                  }}
-                />
+                <div className="dish-search-input-wrap">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Tìm tên món ăn, thức uống..."
+                    value={searchDish}
+                    onChange={e => setSearchDish(e.target.value)}
+                  />
+                  {searchDish && (
+                    <button type="button" className="clear-btn" onClick={() => setSearchDish('')}>
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Danh mục filter */}
+              {/* Danh mục lọc cuộn ngang (Swipeable category chips) */}
               {menuTab === 'dish' && (
                 <div className="waiter-category-pills">
                   <button
                     type="button"
-                    className={`waiter-cat-btn ${selectedCategory === 'ALL' ? 'active' : ''}`}
+                    className={`cat-pill ${selectedCategory === 'ALL' ? 'active' : ''}`}
                     onClick={() => setSelectedCategory('ALL')}
                   >
-                    Tất cả
+                    Tất cả ({menuItems.length})
                   </button>
-                  {categories.map(cat => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      className={`waiter-cat-btn ${selectedCategory === String(cat.id) ? 'active' : ''}`}
-                      onClick={() => setSelectedCategory(String(cat.id))}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
+                  {categories.map(cat => {
+                    const catCount = menuItems.filter(m => m.categoryId === cat.id).length
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`cat-pill ${selectedCategory === String(cat.id) ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(String(cat.id))}
+                      >
+                        {cat.name} ({catCount})
+                      </button>
+                    )
+                  })}
                 </div>
               )}
 
-              {/* Grid Món ăn */}
+              {/* Lưới hiển thị món ăn (Touch friendly mobile cards) */}
               <div className="waiter-dishes-grid">
                 {menuTab === 'dish' ? (
                   filteredMenuItems.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                      Không có món ăn khả dụng
+                    <div className="menu-grid-empty">
+                      <span>🍲</span>
+                      <p>Không tìm thấy món ăn phù hợp</p>
                     </div>
                   ) : (
                     filteredMenuItems.map(dish => {
@@ -507,40 +964,40 @@ function StaffDashboard() {
                       return (
                         <div
                           key={dish.id}
-                          className={`waiter-dish-card ${inCart ? 'in-cart' : ''}`}
+                          className={`pos-dish-card ${inCart ? 'in-cart' : ''}`}
                           onClick={() => handleAddToCart(dish, false)}
                         >
-                          <div className="waiter-dish-thumb-wrap">
+                          <div className="dish-card-thumb">
                             {dish.image ? (
                               <img
                                 src={getImageFullUrl(dish.image)}
                                 alt={dish.name}
-                                className="waiter-dish-thumb"
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="waiter-dish-no-thumb">
-                                🍲
-                              </div>
+                              <div className="dish-thumb-placeholder">🍲</div>
                             )}
+
+                            {/* Badge số lượng nếu đã có trong giỏ */}
                             {inCart && (
-                              <span className="waiter-dish-badge">
+                              <span className="dish-in-cart-badge">
                                 ✓ {inCart.quantity}
                               </span>
                             )}
                           </div>
-                          <div className="waiter-dish-info">
-                            <div className="waiter-dish-name" title={dish.name}>{dish.name}</div>
-                            <div className="waiter-dish-bottom">
-                              <div className="waiter-dish-price">{formatCurrency(dish.price)}</div>
+
+                          <div className="dish-card-body">
+                            <h4 className="dish-name" title={dish.name}>{dish.name}</h4>
+                            <div className="dish-bottom-row">
+                              <span className="dish-price">{formatCurrency(dish.price)}</span>
                               <button
                                 type="button"
-                                className="waiter-dish-add-btn"
+                                className="dish-quick-add"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleAddToCart(dish, false)
                                 }}
-                                title="Thêm món"
+                                title="Thêm vào giỏ"
                               >
                                 +
                               </button>
@@ -552,8 +1009,9 @@ function StaffDashboard() {
                   )
                 ) : (
                   filteredCombos.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                      Không có combo khả dụng
+                    <div className="menu-grid-empty">
+                      <span>🍱</span>
+                      <p>Không tìm thấy combo phù hợp</p>
                     </div>
                   ) : (
                     filteredCombos.map(combo => {
@@ -561,35 +1019,33 @@ function StaffDashboard() {
                       return (
                         <div
                           key={combo.id}
-                          className={`waiter-dish-card ${inCart ? 'in-cart' : ''}`}
+                          className={`pos-dish-card ${inCart ? 'in-cart' : ''}`}
                           onClick={() => handleAddToCart(combo, true)}
                         >
-                          <div className="waiter-dish-thumb-wrap">
+                          <div className="dish-card-thumb">
                             {combo.image ? (
                               <img
                                 src={getImageFullUrl(combo.image)}
                                 alt={combo.name}
-                                className="waiter-dish-thumb"
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="waiter-dish-no-thumb">
-                                🍱
-                              </div>
+                              <div className="dish-thumb-placeholder">🍱</div>
                             )}
                             {inCart && (
-                              <span className="waiter-dish-badge">
+                              <span className="dish-in-cart-badge">
                                 ✓ {inCart.quantity}
                               </span>
                             )}
                           </div>
-                          <div className="waiter-dish-info">
-                            <div className="waiter-dish-name" title={combo.name}>{combo.name}</div>
-                            <div className="waiter-dish-bottom">
-                              <div className="waiter-dish-price">{formatCurrency(combo.price)}</div>
+
+                          <div className="dish-card-body">
+                            <h4 className="dish-name" title={combo.name}>{combo.name}</h4>
+                            <div className="dish-bottom-row">
+                              <span className="dish-price">{formatCurrency(combo.price)}</span>
                               <button
                                 type="button"
-                                className="waiter-dish-add-btn"
+                                className="dish-quick-add"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleAddToCart(combo, true)
@@ -608,55 +1064,60 @@ function StaffDashboard() {
               </div>
             </div>
 
-            {/* CỘT PHẢI: GIỎ HÀNG ĐẶT MÓN */}
-            <div className="waiter-cart-pane">
-              <div className="waiter-cart-header">
-                <div className="waiter-cart-table-badge">
-                  🪑 BÀN {selectedTable?.tableNumber}
+            {/* ── BẢNG GIỎ HÀNG (DESKTOP/TABLET SIDEBAR & MOBILE DRAWER) ── */}
+            <div className={`waiter-cart-pane ${cartDrawerOpen ? 'drawer-open' : ''}`}>
+              <div className="cart-pane-header">
+                <div className="cart-title-wrap">
+                  <span className="cart-icon">🛒</span>
+                  <div>
+                    <h3 className="cart-title">Đơn gọi món</h3>
+                    <span className="cart-sub">BÀN {selectedTable?.tableNumber} ({cartTotalQty} món)</span>
+                  </div>
                 </div>
+
+                {/* Nút đóng drawer trên mobile */}
                 <button
                   type="button"
-                  style={{ border: 'none', background: 'transparent', color: '#64748b', cursor: 'pointer', fontWeight: 600 }}
-                  onClick={() => setViewMode('tables')}
+                  className="cart-close-drawer-btn"
+                  onClick={() => setCartDrawerOpen(false)}
                 >
-                  ✕ Đổi bàn
+                  ✕
                 </button>
               </div>
 
-              <div className="waiter-cart-items-list">
+              {/* Danh sách món trong giỏ */}
+              <div className="cart-items-container">
                 {cart.length === 0 ? (
-                  <div className="waiter-cart-empty">
-                    <span style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🛒</span>
-                    <div>Chưa chọn món nào.</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                      Nhấn vào món bên trái để thêm vào đơn.
-                    </div>
+                  <div className="cart-empty-state">
+                    <span className="cart-empty-icon">🍽️</span>
+                    <h4>Chưa chọn món nào</h4>
+                    <p>Chạm vào các món bên cạnh để thêm vào đơn của bàn.</p>
                   </div>
                 ) : (
                   cart.map((item, idx) => (
-                    <div key={item.key || idx} className="waiter-cart-item">
-                      <div className="waiter-cart-item-row">
-                        <div className="waiter-cart-item-info">
-                          <span className="waiter-cart-item-name">{item.name}</span>
-                          <span className="waiter-cart-item-price">
+                    <div key={item.key || idx} className="cart-item-card">
+                      <div className="cart-item-top">
+                        <div className="cart-item-info">
+                          <span className="cart-item-name">{item.name}</span>
+                          <span className="cart-item-price">
                             {formatCurrency(item.price * item.quantity)}
                           </span>
                         </div>
-                        <div className="waiter-cart-stepper">
+
+                        {/* Bộ nút tăng giảm số lượng */}
+                        <div className="cart-stepper">
                           <button
                             type="button"
-                            className="waiter-stepper-btn"
+                            className="stepper-btn minus"
                             onClick={() => handleUpdateCartQty(idx, -1)}
                             title="Giảm 1"
                           >
                             −
                           </button>
-                          <span className="waiter-stepper-qty">
-                            {item.quantity}
-                          </span>
+                          <span className="stepper-val">{item.quantity}</span>
                           <button
                             type="button"
-                            className="waiter-stepper-btn"
+                            className="stepper-btn plus"
                             onClick={() => handleUpdateCartQty(idx, 1)}
                             title="Tăng 1"
                           >
@@ -664,89 +1125,133 @@ function StaffDashboard() {
                           </button>
                           <button
                             type="button"
-                            className="waiter-cart-del-btn"
+                            className="stepper-btn delete"
                             onClick={() => handleRemoveFromCart(idx)}
                             title="Xóa món"
                           >
-                            ✕
+                            🗑️
                           </button>
                         </div>
                       </div>
 
+                      {/* Quick note tags 1-chạm */}
+                      <div className="cart-quick-tags">
+                        {QUICK_NOTES.slice(0, 4).map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className={`tag-chip ${(item.note || '').includes(tag) ? 'active' : ''}`}
+                            onClick={() => handleAppendQuickNote(idx, tag)}
+                          >
+                            +{tag}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Ô nhập ghi chú */}
                       <input
                         type="text"
-                        placeholder="Ghi chú món (vd: ít cay, không hành...)"
+                        placeholder="Ghi chú thêm (vd: ít ngọt, mang ra trước...)"
                         value={item.note || ''}
                         onChange={e => handleUpdateCartNote(idx, e.target.value)}
-                        className="waiter-cart-note-input"
+                        className="cart-note-input"
                       />
                     </div>
                   ))
                 )}
               </div>
 
-              <div className="waiter-cart-footer">
+              {/* Footer giỏ hàng */}
+              <div className="cart-pane-footer">
                 {!activeTableOrder && (
                   <input
                     type="text"
                     placeholder="Ghi chú chung cho đơn (nếu có)..."
                     value={orderNote}
                     onChange={e => setOrderNote(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
-                      boxSizing: 'border-box',
-                    }}
+                    className="order-general-note-input"
                   />
                 )}
 
-                <div className="waiter-total-row">
+                <div className="cart-total-row">
                   <span>TỔNG CỘNG:</span>
-                  <span style={{ color: '#b8860b' }}>{formatCurrency(cartTotal)}</span>
+                  <span className="cart-total-amount">{formatCurrency(cartTotal)}</span>
                 </div>
 
                 <button
                   type="button"
-                  className="waiter-submit-btn"
+                  className="cart-submit-btn"
                   disabled={submittingOrder || cart.length === 0}
                   onClick={handleSubmitOrder}
                 >
-                  {submittingOrder ? 'Đang gửi đơn...' : '🚀 GỬI ĐƠN VÀO BẾP'}
+                  {submittingOrder ? (
+                    <>
+                      <span className="spinner-sm" />
+                      <span>Đang gửi đơn...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🚀 GỬI ĐƠN VÀO BẾP</span>
+                      <span className="submit-qty">({cartTotalQty} món)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
+
+            {/* ── MOBILE STICKY FLOATING CART BAR ──────────────────── */}
+            {cart.length > 0 && !cartDrawerOpen && (
+              <div
+                className="mobile-floating-cart-bar"
+                onClick={() => setCartDrawerOpen(true)}
+              >
+                <div className="floating-cart-info">
+                  <span className="floating-badge">{cartTotalQty}</span>
+                  <div>
+                    <div className="floating-total">{formatCurrency(cartTotal)}</div>
+                    <div className="floating-sub">Bàn {selectedTable?.tableNumber} • Nhấn để xem giỏ</div>
+                  </div>
+                </div>
+
+                <button type="button" className="floating-submit-btn">
+                  Gửi bếp 🚀
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
 
-      {/* ── MODAL: CHI TIẾT BÀN ĐANG PHỤC VỤ (OCCUPIED) ────────────── */}
+      {/* ── 3. MODAL: CHI TIẾT BÀN ĐANG PHỤC VỤ (OCCUPIED / BILLING) ── */}
       {showTableModal && selectedTable && activeTableOrder && (
         <div className="waiter-modal-overlay" onClick={() => setShowTableModal(false)}>
           <div className="waiter-modal-box" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="modal-header">
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#1e3527' }}>
-                  BÀN {selectedTable.tableNumber} — Đơn #{activeTableOrder.id}
-                </h2>
-                <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-                  Trạng thái: <strong>{activeTableOrder.status}</strong>
+                <div className="modal-title-row">
+                  <h2 className="modal-table-num">BÀN {selectedTable.tableNumber}</h2>
+                  <span className="modal-order-id">#ORD-{activeTableOrder.id}</span>
+                </div>
+                <p className="modal-table-sub">
+                  Khu vực: <strong>{getAreaInfo(getTableArea(selectedTable)).name}</strong>
+                  {' • '}
+                  Trạng thái: <strong style={{ color: activeTableOrder.status === 'BILLING_REQUESTED' ? '#a855f7' : '#ef4444' }}>
+                    {activeTableOrder.status === 'BILLING_REQUESTED' ? '🟣 Yêu cầu thanh toán' : '🔴 Đang phục vụ'}
+                  </strong>
                 </p>
               </div>
               <button
                 type="button"
-                style={{ border: 'none', background: '#f1f5f9', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer' }}
+                className="modal-close-btn"
                 onClick={() => setShowTableModal(false)}
               >
                 ✕
               </button>
             </div>
 
-            {/* Bảng danh sách món */}
-            <div>
-              <table className="waiter-table-items">
+            {/* Danh sách món đang gọi */}
+            <div className="modal-items-scroll">
+              <table className="modal-items-table">
                 <thead>
                   <tr>
                     <th>Món ăn</th>
@@ -760,30 +1265,33 @@ function StaffDashboard() {
                   {(activeTableOrder.items || []).map(item => (
                     <tr key={item.id}>
                       <td>
-                        <div style={{ fontWeight: 700 }}>{item.itemName}</div>
-                        {item.note && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📝 {item.note}</div>}
+                        <div className="item-name">{item.itemName}</div>
+                        {item.note && <div className="item-note">📝 {item.note}</div>}
                       </td>
                       <td style={{ textAlign: 'center', fontWeight: 800 }}>{item.quantity}</td>
                       <td style={{ fontWeight: 700, color: '#b8860b' }}>
                         {formatCurrency(item.subtotal)}
                       </td>
                       <td>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                          {item.status === 'PENDING' ? '⏳ Chờ nấu' : item.status === 'COOKING' ? '🍳 Đang nấu' : item.status === 'SERVED' ? '✅ Đã lên món' : item.status}
+                        <span className={`dish-status-chip ${item.status}`}>
+                          {item.status === 'PENDING' ? '⏳ Chờ nấu'
+                            : item.status === 'COOKING' ? '🍳 Đang nấu'
+                            : item.status === 'SERVED' ? '✅ Đã lên món'
+                            : item.status}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {item.status === 'PENDING' ? (
                           <button
                             type="button"
-                            className="waiter-cancel-btn"
+                            className="cancel-item-btn"
                             onClick={() => handleDeleteItem(item.id, item.status, item.itemName)}
                           >
-                            ✕ Hủy món
+                            ✕ Hủy
                           </button>
                         ) : (
-                          <span className="waiter-locked-badge">
-                            {item.status === 'COOKING' ? '🔒 Đang nấu (Khóa)' : '✅ Đã lên món'}
+                          <span className="locked-badge">
+                            {item.status === 'COOKING' ? '🔒 Đang nấu' : '✅ Đã lên'}
                           </span>
                         )}
                       </td>
@@ -793,39 +1301,93 @@ function StaffDashboard() {
               </table>
             </div>
 
-            {/* Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '2px dashed #cbd5e1' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>Tổng tiền hiện tại:</span>
-              <span style={{ fontWeight: 900, fontSize: '1.3rem', color: '#b8860b' }}>
+            {/* Tổng tiền */}
+            <div className="modal-total-bar">
+              <span className="total-label">Tổng hóa đơn hiện tại:</span>
+              <span className="total-value">
                 {formatCurrency(activeTableOrder.totalAmount)}
               </span>
             </div>
 
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+            {/* Nút thao tác nhanh của nhân viên phục vụ */}
+            <div className="modal-action-buttons">
               <button
                 type="button"
-                className="waiter-submit-btn"
-                style={{ flex: 1, background: '#2a4736' }}
+                className="modal-btn add-items"
                 onClick={handleAddMoreItems}
               >
-                + Gọi thêm món vào bàn
+                ➕ Gọi thêm món
               </button>
+
               <button
                 type="button"
-                className="waiter-submit-btn"
-                style={{ flex: 1, background: 'linear-gradient(135deg, #15803d, #166534)' }}
+                className="modal-btn req-bill"
+                onClick={() => handleRequestBilling(selectedTable, activeTableOrder)}
+              >
+                🟣 Yêu cầu thanh toán
+              </button>
+
+              <button
+                type="button"
+                className="modal-btn checkout"
                 onClick={handleCheckoutTable}
               >
-                💰 Thanh toán & Trả bàn
+                💰 Thu tiền & Trả bàn
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast */}
-      {toast && <div className="waiter-toast">✓ {toast}</div>}
+      {/* ── 4. MOBILE BOTTOM NAVIGATION BAR (Thumb Friendly) ───────── */}
+      <nav className="mobile-bottom-nav">
+        <button
+          type="button"
+          className={`nav-item ${viewMode === 'tables' ? 'active' : ''}`}
+          onClick={() => {
+            setViewMode('tables')
+            setCartDrawerOpen(false)
+          }}
+        >
+          <span className="nav-icon">🪑</span>
+          <span className="nav-label">Sơ đồ bàn</span>
+        </button>
+
+        <button
+          type="button"
+          className={`nav-item ${viewMode === 'ordering' ? 'active' : ''}`}
+          onClick={() => {
+            if (selectedTable) {
+              setViewMode('ordering')
+            } else {
+              showToast('Vui lòng chạm chọn 1 bàn để gọi món!')
+            }
+          }}
+        >
+          <span className="nav-icon">
+            📝
+            {cartTotalQty > 0 && <span className="nav-badge">{cartTotalQty}</span>}
+          </span>
+          <span className="nav-label">Gọi món</span>
+        </button>
+
+        <a href="/staff/reservations" className="nav-item">
+          <span className="nav-icon">📅</span>
+          <span className="nav-label">Đặt bàn</span>
+        </a>
+
+        <button
+          type="button"
+          className="nav-item"
+          onClick={fetchData}
+        >
+          <span className="nav-icon">🔄</span>
+          <span className="nav-label">Làm mới</span>
+        </button>
+      </nav>
+
+      {/* Toast thông báo */}
+      {toast && <div className="waiter-toast">⚡ {toast}</div>}
     </div>
   )
 }

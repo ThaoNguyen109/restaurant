@@ -7,8 +7,8 @@ public class TableStatusRequest {
 
     @NotBlank(message = "Trạng thái không được để trống")
     @Pattern(
-        regexp = "AVAILABLE|OCCUPIED|RESERVED|MAINTENANCE|INACTIVE",
-        message = "Trạng thái không hợp lệ. Chỉ chấp nhận: AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, INACTIVE"
+        regexp = "AVAILABLE|OCCUPIED|RESERVED|MAINTENANCE|INACTIVE|BILLING_REQUESTED",
+        message = "Trạng thái không hợp lệ. Chỉ chấp nhận: AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, INACTIVE, BILLING_REQUESTED"
     )
     private String status;
 

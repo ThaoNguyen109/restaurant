@@ -2,13 +2,7 @@ package com.restaurant.restaurant_management.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class OrderItemStatusRequest {
 
     @NotBlank(message = "Trạng thái không được để trống")
@@ -17,4 +11,19 @@ public class OrderItemStatusRequest {
         message = "Trạng thái món phải là: PENDING, COOKING, SERVED hoặc CANCELLED"
     )
     private String status;
+
+    public OrderItemStatusRequest() {
+    }
+
+    public OrderItemStatusRequest(String status) {
+        this.status = status;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
