@@ -1,30 +1,40 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
-import './OrdersPage.css'
+import '../../styles/pages/admin/OrdersPage.css'
 import {
   getAllOrders,
   getOrderById,
   updateOrderStatus,
   deleteOrder,
   getOrderStats,
+  updateOrderItemStatus,
 } from '../../services/orderService'
 import { getImageFullUrl } from '../../services/apiClient'
 import { getRole } from '../../utils/auth'
 
-const STATUS_LABELS = {
-  PENDING: 'Chờ xác nhận',
-  CONFIRMED: 'Đã nhận đơn',
-  PREPARING: 'Đang nấu',
-  SERVING: 'Đang phục vụ',
-  COMPLETED: 'Hoàn tất',
-  CANCELLED: 'Đã hủy',
+const STATUS_CONFIG = {
+  ALL:       { label: 'Tất cả',           key: 'ALL',       cls: 'st-all'       },
+  PENDING:   { label: 'Chờ xác nhận',     key: 'PENDING',   cls: 'st-pending'   },
+  CONFIRMED: { label: 'Đã nhận đơn',      key: 'CONFIRMED', cls: 'st-confirmed' },
+  PREPARING: { label: 'Đang nấu',         key: 'PREPARING', cls: 'st-preparing' },
+  SERVING:   { label: 'Đang phục vụ',     key: 'SERVING',   cls: 'st-serving'   },
+  COMPLETED: { label: 'Hoàn tất',         key: 'COMPLETED', cls: 'st-completed' },
+  CANCELLED: { label: 'Đã hủy',           key: 'CANCELLED', cls: 'st-cancelled' },
 }
 
-const ITEM_STATUS_LABELS = {
-  PENDING: 'Chờ chế biến',
-  COOKING: 'Đang nấu',
-  SERVED: 'Đã lên món',
-  CANCELLED: 'Đã hủy',
+const ORDER_STEPS = [
+  { key: 'PENDING',   label: 'Chờ xác nhận' },
+  { key: 'CONFIRMED', label: 'Đã nhận đơn' },
+  { key: 'PREPARING', label: 'Đang nấu' },
+  { key: 'SERVING',   label: 'Đang phục vụ' },
+  { key: 'COMPLETED', label: 'Hoàn tất' },
+]
+
+const ITEM_STATUS_CONFIG = {
+  PENDING:   { label: 'Chờ nấu',     cls: 'it-pending'   },
+  COOKING:   { label: 'Đang nấu',    cls: 'it-cooking'   },
+  SERVED:    { label: 'Đã lên món',  cls: 'it-served'    },
+  CANCELLED: { label: 'Đã hủy',      cls: 'it-cancelled' },
 }
 
 function formatCurrency(amount) {
@@ -43,9 +53,43 @@ function formatDateTime(isoString) {
   })
 }
 
-function OrdersPage() {
+function formatTimeOnly(isoString) {
+  if (!isoString) return '--:--'
+  const d = new Date(isoString)
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDateOnly(isoString) {
+  if (!isoString) return ''
+  const d = new Date(isoString)
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function getTimeAgo(isoString) {
+  if (!isoString) return ''
+  const diffMs = Date.now() - new Date(isoString).getTime()
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  if (diffMins < 1) return 'Vừa tạo'
+  if (diffMins < 60) return `${diffMins} phút trước`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours} giờ trước`
+  return `${Math.floor(diffHours / 24)} ngày trước`
+}
+
+function getTodayString() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+}
+
+function getYesterdayString() {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+export default function OrdersPage() {
   const role = getRole()?.toUpperCase()
-  const canAccessStaff = !role || ['ADMIN', 'MANAGER', 'WAITER', 'STAFF'].includes(role)
+  const canAccessStaff   = !role || ['ADMIN', 'MANAGER', 'WAITER', 'STAFF'].includes(role)
   const canAccessKitchen = !role || ['ADMIN', 'MANAGER', 'KITCHEN', 'CHEF'].includes(role)
   const canAccessCashier = !role || ['ADMIN', 'MANAGER', 'CASHIER'].includes(role)
 
@@ -61,19 +105,24 @@ function OrdersPage() {
   })
   const [loading, setLoading] = useState(true)
 
-  // Filters
+  // Filters & Views
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [dateFilter, setDateFilter] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [dateFilter, setDateFilter]     = useState('')
+  const [datePreset, setDatePreset]     = useState('ALL') // ALL, TODAY, YESTERDAY, CUSTOM
+  const [searchTerm, setSearchTerm]     = useState('')
+  const [viewMode, setViewMode]         = useState('table') // 'table' | 'cards'
+  const [currentPage, setCurrentPage]   = useState(1)
+  const pageSize = 12
+
+  // Modals & Drawers
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showBillModal, setShowBillModal]     = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [selectedOrder, setSelectedOrder]     = useState(null)
+  const [updatingItemStatusId, setUpdatingItemStatusId] = useState(null)
 
   // Toast
   const [toast, setToast] = useState(null)
-
-  // Modals
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [showBillModal, setShowBillModal] = useState(false)
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
-  const [selectedOrder, setSelectedOrder] = useState(null)
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -84,23 +133,29 @@ function OrdersPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
+      let resolvedDate = undefined
+      if (datePreset === 'TODAY') resolvedDate = getTodayString()
+      else if (datePreset === 'YESTERDAY') resolvedDate = getYesterdayString()
+      else if (datePreset === 'CUSTOM' && dateFilter) resolvedDate = dateFilter
+
       const [ordersData, statsData] = await Promise.all([
         getAllOrders({
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
-          date: dateFilter || undefined,
-          search: searchTerm || undefined,
+          date: resolvedDate,
+          search: searchTerm ? searchTerm.trim() : undefined,
         }),
         getOrderStats().catch(() => ({})),
       ])
 
       setOrders(ordersData || [])
       if (statsData) setStats(statsData)
+      setCurrentPage(1)
     } catch (err) {
       showToast(err.message || 'Không thể tải danh sách đơn hàng', 'error')
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, dateFilter, searchTerm])
+  }, [statusFilter, datePreset, dateFilter, searchTerm])
 
   useEffect(() => {
     fetchData()
@@ -110,7 +165,7 @@ function OrdersPage() {
   const handleOrderStatusChange = async (orderId, newStatus) => {
     try {
       const updated = await updateOrderStatus(orderId, newStatus)
-      showToast(`Đã chuyển đơn #${orderId} sang "${STATUS_LABELS[newStatus] || newStatus}"`)
+      showToast(`Đã chuyển đơn #${orderId} sang "${STATUS_CONFIG[newStatus]?.label || newStatus}"`)
       setOrders(prev => prev.map(o => o.id === orderId ? updated : o))
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(updated)
@@ -118,6 +173,22 @@ function OrdersPage() {
       getOrderStats().then(s => s && setStats(s)).catch(() => {})
     } catch (err) {
       showToast(err.message || 'Cập nhật trạng thái thất bại', 'error')
+    }
+  }
+
+  // ── Quick Change Item Status in Order Detail ──────────────────────
+  const handleItemStatusChange = async (orderId, itemId, newStatus) => {
+    try {
+      setUpdatingItemStatusId(itemId)
+      await updateOrderItemStatus(orderId, itemId, newStatus)
+      const freshOrder = await getOrderById(orderId)
+      setSelectedOrder(freshOrder)
+      setOrders(prev => prev.map(o => o.id === orderId ? freshOrder : o))
+      showToast('Đã cập nhật trạng thái món ăn')
+    } catch (err) {
+      showToast(err.message || 'Không thể cập nhật trạng thái món', 'error')
+    } finally {
+      setUpdatingItemStatusId(null)
     }
   }
 
@@ -139,275 +210,393 @@ function OrdersPage() {
     }
   }
 
+  // ── Pagination Calculation ────────────────────────────────────────
+  const totalPages = Math.ceil(orders.length / pageSize) || 1
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return orders.slice(start, start + pageSize)
+  }, [orders, currentPage, pageSize])
+
+  // ── Counts per status ─────────────────────────────────────────────
+  const statusCounts = useMemo(() => {
+    const counts = { ALL: orders.length }
+    Object.keys(STATUS_CONFIG).forEach(k => {
+      if (k !== 'ALL') counts[k] = orders.filter(o => o.status === k).length
+    })
+    return counts
+  }, [orders])
+
   return (
     <AdminLayout
       title="Quản lý đơn hàng"
-      subtitle="Giám sát & Thống kê"
+      subtitle="Giám sát luồng đặt món & điều phối vận hành hệ thống"
       actions={
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="ord-topbar-actions">
           {canAccessStaff && (
-            <a
-              href="/staff"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                background: '#2a4736',
-                color: '#fff',
-                textDecoration: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 6px rgba(42, 71, 54, 0.25)',
-              }}
-            >
-              🍽️ Màn hình Phục vụ
+            <a href="/staff" className="ord-quick-link">
+              Phục vụ
             </a>
           )}
           {canAccessKitchen && (
-            <a
-              href="/kitchen"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                background: '#d97706',
-                color: '#fff',
-                textDecoration: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)',
-              }}
-            >
-              🍳 Màn hình Bếp
+            <a href="/kitchen" className="ord-quick-link">
+              Bếp
             </a>
           )}
           {canAccessCashier && (
-            <a
-              href="/cashier"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                background: '#0284c7',
-                color: '#fff',
-                textDecoration: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
-              }}
-            >
-              💰 Màn hình Thu ngân
+            <a href="/cashier" className="ord-quick-link">
+              Thu ngân
             </a>
           )}
+          <button
+            type="button"
+            className="ord-btn-refresh"
+            onClick={fetchData}
+            title="Tải lại dữ liệu"
+          >
+            Làm mới
+          </button>
         </div>
       }
     >
       <div className="orders-page">
-        {/* 1. STATS SUMMARY BAR */}
-        <div className="ord-stats-bar">
-          <div className="ord-stat-card">
-            <div className="ord-stat-icon total">📋</div>
-            <div className="ord-stat-info">
-              <span className="ord-stat-label">Tổng đơn hôm nay</span>
-              <span className="ord-stat-value">{stats.totalOrdersToday || 0}</span>
-            </div>
-          </div>
-
-          <div className="ord-stat-card">
-            <div className="ord-stat-icon pending">⏳</div>
-            <div className="ord-stat-info">
-              <span className="ord-stat-label">Chờ xác nhận</span>
-              <span className="ord-stat-value">{stats.pendingOrders || 0}</span>
-            </div>
-          </div>
-
-          <div className="ord-stat-card">
-            <div className="ord-stat-icon cooking">🍳</div>
-            <div className="ord-stat-info">
-              <span className="ord-stat-label">Đang nấu / Phục vụ</span>
-              <span className="ord-stat-value">{(stats.preparingOrders || 0) + (stats.servingOrders || 0)}</span>
-            </div>
-          </div>
-
-          <div className="ord-stat-card">
-            <div className="ord-stat-icon revenue">💰</div>
-            <div className="ord-stat-info">
-              <span className="ord-stat-label">Doanh thu hôm nay</span>
-              <span className="ord-stat-value money">{formatCurrency(stats.revenueToday)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. TOOLBAR & FILTERS */}
-        <div className="ord-toolbar">
-          <div className="ord-search-box">
-            <span className="ord-search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Tìm theo mã đơn (#101), số bàn, ghi chú..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+        {/* ── 1. EXECUTIVE METRIC CARDS ───────────────────────────── */}
+        <div className="ord-metrics-grid">
+          <div
+            className={`ord-metric-card${datePreset === 'TODAY' && statusFilter === 'ALL' ? ' active' : ''}`}
+            onClick={() => { setDatePreset('TODAY'); setStatusFilter('ALL'); setDateFilter('') }}
           >
-            <option value="ALL">Tất cả trạng thái</option>
-            <option value="PENDING">Chờ xác nhận</option>
-            <option value="CONFIRMED">Đã nhận đơn</option>
-            <option value="PREPARING">Đang nấu</option>
-            <option value="SERVING">Đang phục vụ</option>
-            <option value="COMPLETED">Hoàn tất / Đã thanh toán</option>
-            <option value="CANCELLED">Đã hủy</option>
-          </select>
+            <div className="ord-metric-head">
+              <span className="ord-metric-label">Tổng đơn hôm nay</span>
+              <span className="ord-metric-badge neutral">Hôm nay</span>
+            </div>
+            <div className="ord-metric-value">{stats.totalOrdersToday || 0}</div>
+            <div className="ord-metric-sub">Tất cả đơn phát sinh trong ngày</div>
+          </div>
 
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            title="Lọc theo ngày"
-          />
+          <div
+            className={`ord-metric-card${statusFilter === 'PENDING' ? ' active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+          >
+            <div className="ord-metric-head">
+              <span className="ord-metric-label">Chờ xác nhận</span>
+              {stats.pendingOrders > 0 && <span className="ord-metric-badge warning">Cần duyệt</span>}
+            </div>
+            <div className="ord-metric-value text-amber">{stats.pendingOrders || 0}</div>
+            <div className="ord-metric-sub">Đơn mới gửi từ khách / nhân viên</div>
+          </div>
 
-          {(searchTerm || statusFilter !== 'ALL' || dateFilter) && (
-            <button
-              className="ord-btn-clear"
-              onClick={() => {
-                setSearchTerm('')
-                setStatusFilter('ALL')
-                setDateFilter('')
-              }}
-            >
-              ✕ Xóa bộ lọc
-            </button>
-          )}
+          <div
+            className={`ord-metric-card${statusFilter === 'PREPARING' || statusFilter === 'SERVING' ? ' active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'PREPARING' ? 'ALL' : 'PREPARING')}
+          >
+            <div className="ord-metric-head">
+              <span className="ord-metric-label">Đang nấu &amp; Phục vụ</span>
+              <span className="ord-metric-badge info">Bếp &amp; Sảnh</span>
+            </div>
+            <div className="ord-metric-value text-blue">
+              {(stats.preparingOrders || 0) + (stats.servingOrders || 0)}
+            </div>
+            <div className="ord-metric-sub">
+              {stats.preparingOrders || 0} đang nấu · {stats.servingOrders || 0} đang phục vụ
+            </div>
+          </div>
 
-          <button className="ord-btn-refresh" onClick={fetchData} title="Làm mới">
-            🔄 Làm mới
-          </button>
+          <div
+            className={`ord-metric-card${statusFilter === 'COMPLETED' ? ' active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+          >
+            <div className="ord-metric-head">
+              <span className="ord-metric-label">Đã hoàn tất hôm nay</span>
+              <span className="ord-metric-badge success">Thành công</span>
+            </div>
+            <div className="ord-metric-value text-emerald">{stats.completedOrdersToday || 0}</div>
+            <div className="ord-metric-sub">Đơn đã hoàn thành và thanh toán</div>
+          </div>
+
+          <div className="ord-metric-card revenue">
+            <div className="ord-metric-head">
+              <span className="ord-metric-label">Doanh thu hôm nay</span>
+              <span className="ord-metric-badge dark">Doanh số</span>
+            </div>
+            <div className="ord-metric-value text-dark money">
+              {formatCurrency(stats.revenueToday)}
+            </div>
+            <div className="ord-metric-sub">Doanh thu tạm tính từ các đơn hôm nay</div>
+          </div>
         </div>
 
-        {/* 3. ORDERS DATA TABLE */}
-        <div className="ord-table-card">
-          {loading ? (
-            <div className="ord-loading">
-              <div className="ord-spinner" />
-              <p>Đang tải dữ liệu đơn hàng...</p>
+        {/* ── 2. SMART TOOLBAR & TABS ────────────────────────────── */}
+        <div className="ord-control-panel">
+          {/* Status Tabs */}
+          <div className="ord-status-tabs">
+            {Object.values(STATUS_CONFIG).map(st => {
+              const count = statusCounts[st.key] || 0
+              const isActive = statusFilter === st.key
+              return (
+                <button
+                  key={st.key}
+                  type="button"
+                  className={`ord-tab-btn ${st.cls}${isActive ? ' active' : ''}`}
+                  onClick={() => setStatusFilter(st.key)}
+                >
+                  <span>{st.label}</span>
+                  <span className="ord-tab-count">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Search, Date presets, View toggle */}
+          <div className="ord-filter-row">
+            <div className="ord-search-wrap">
+              <input
+                type="text"
+                className="ord-search-input"
+                placeholder="Tìm mã đơn (#101), số bàn, ghi chú, món ăn..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="ord-search-clear"
+                  onClick={() => setSearchTerm('')}
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          ) : orders.length === 0 ? (
-            <div className="ord-empty">
-              <div className="empty-icon">🍽️</div>
-              <p>Không có đơn hàng nào phù hợp với điều kiện tìm kiếm.</p>
+
+            {/* Date filter presets */}
+            <div className="ord-date-segmented">
+              <button
+                type="button"
+                className={`ord-seg-btn${datePreset === 'ALL' ? ' active' : ''}`}
+                onClick={() => { setDatePreset('ALL'); setDateFilter('') }}
+              >
+                Mọi ngày
+              </button>
+              <button
+                type="button"
+                className={`ord-seg-btn${datePreset === 'TODAY' ? ' active' : ''}`}
+                onClick={() => { setDatePreset('TODAY'); setDateFilter('') }}
+              >
+                Hôm nay
+              </button>
+              <button
+                type="button"
+                className={`ord-seg-btn${datePreset === 'YESTERDAY' ? ' active' : ''}`}
+                onClick={() => { setDatePreset('YESTERDAY'); setDateFilter('') }}
+              >
+                Hôm qua
+              </button>
+              <input
+                type="date"
+                className="ord-date-picker"
+                value={datePreset === 'CUSTOM' ? dateFilter : ''}
+                onChange={e => {
+                  setDatePreset('CUSTOM')
+                  setDateFilter(e.target.value)
+                }}
+                title="Chọn ngày tùy ý"
+              />
             </div>
-          ) : (
+
+            {/* View Mode Toggle */}
+            <div className="ord-view-toggle">
+              <button
+                type="button"
+                className={`ord-view-btn${viewMode === 'table' ? ' active' : ''}`}
+                onClick={() => setViewMode('table')}
+                title="Xem dạng bảng"
+              >
+                Bảng
+              </button>
+              <button
+                type="button"
+                className={`ord-view-btn${viewMode === 'cards' ? ' active' : ''}`}
+                onClick={() => setViewMode('cards')}
+                title="Xem dạng thẻ"
+              >
+                Thẻ
+              </button>
+            </div>
+
+            {/* Clear filters button */}
+            {(searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL' || dateFilter) && (
+              <button
+                type="button"
+                className="ord-btn-reset"
+                onClick={() => {
+                  setSearchTerm('')
+                  setStatusFilter('ALL')
+                  setDatePreset('ALL')
+                  setDateFilter('')
+                }}
+              >
+                Xóa lọc
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── 3. DATA VIEW: TABLE OR CARDS ───────────────────────── */}
+        {loading ? (
+          <div className="ord-state-box">
+            <div className="ord-spinner" />
+            <div className="ord-state-title">Đang tải danh sách đơn hàng...</div>
+            <div className="ord-state-desc">Vui lòng chờ trong giây lát</div>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="ord-state-box">
+            <div className="ord-state-title">Không tìm thấy đơn hàng nào</div>
+            <div className="ord-state-desc">
+              {searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL'
+                ? 'Không có đơn nào khớp với bộ lọc hiện tại. Thử chọn lại trạng thái hoặc xóa từ khóa tìm kiếm.'
+                : 'Chưa có đơn hàng nào được ghi nhận trong hệ thống.'}
+            </div>
+            {(searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL') && (
+              <button
+                type="button"
+                className="ord-btn-secondary"
+                onClick={() => {
+                  setSearchTerm('')
+                  setStatusFilter('ALL')
+                  setDatePreset('ALL')
+                  setDateFilter('')
+                }}
+              >
+                Xem tất cả đơn
+              </button>
+            )}
+          </div>
+        ) : viewMode === 'table' ? (
+
+          /* ── TABLE VIEW ───────────────────────────────────────── */
+          <div className="ord-table-wrapper">
             <table className="ord-table">
               <thead>
                 <tr>
-                  <th>Mã đơn</th>
-                  <th>Bàn</th>
-                  <th>Món ăn</th>
-                  <th>Tổng tiền</th>
-                  <th>Thời gian</th>
-                  <th>Trạng thái</th>
-                  <th>Hành động</th>
+                  <th style={{ width: '130px' }}>Mã đơn &amp; Bàn</th>
+                  <th style={{ width: '150px' }}>Thời gian</th>
+                  <th>Danh sách món</th>
+                  <th style={{ width: '130px' }}>Tổng tiền</th>
+                  <th style={{ width: '150px' }}>Trạng thái</th>
+                  <th style={{ width: '170px', textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map(order => {
+                {paginatedOrders.map(order => {
                   const items = order.items || []
-                  const statusKey = order.status ? order.status.toLowerCase() : 'pending'
+                  const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
                   return (
-                    <tr key={order.id}>
-                      {/* Mã đơn */}
+                    <tr key={order.id} className="ord-row">
+                      {/* Cột 1: Mã đơn & Bàn */}
                       <td>
-                        <div className="ord-id-cell">
-                          <span className="ord-code">#ORD-{order.id}</span>
-                          {order.note && <span className="ord-time">📝 {order.note}</span>}
+                        <div className="ord-code-cell">
+                          <span className="ord-code">#{order.id}</span>
+                          <span className="ord-table-pill">
+                            Bàn {order.tableNumber || 'Mang đi'}
+                          </span>
                         </div>
                       </td>
 
-                      {/* Bàn */}
+                      {/* Cột 2: Thời gian */}
                       <td>
-                        <span className="ord-table-badge">
-                          Bàn {order.tableNumber || '?'}
-                        </span>
+                        <div className="ord-time-cell">
+                          <span className="ord-time-main">{formatTimeOnly(order.createdAt)}</span>
+                          <span className="ord-time-sub">{formatDateOnly(order.createdAt)}</span>
+                          <span className="ord-time-ago">{getTimeAgo(order.createdAt)}</span>
+                        </div>
                       </td>
 
-                      {/* Món ăn preview */}
+                      {/* Cột 3: Danh sách món preview */}
                       <td>
-                        <div className="ord-items-preview">
-                          {items.slice(0, 2).map((it, idx) => (
-                            <span key={idx} className="ord-item-chip">
-                              <span className="ord-item-qty">{it.quantity}x</span>
-                              <span>{it.itemName || it.menuItemName || it.comboName}</span>
-                            </span>
-                          ))}
-                          {items.length > 2 && (
-                            <span className="ord-more-items">
-                              +{items.length - 2} món khác...
-                            </span>
-                          )}
-                          {items.length === 0 && (
-                            <span className="ord-more-items">Chưa chọn món</span>
+                        <div className="ord-items-cell">
+                          <div className="ord-items-tags">
+                            {items.slice(0, 3).map((it, idx) => (
+                              <span key={idx} className="ord-item-pill">
+                                <strong className="ord-item-qty">{it.quantity}×</strong>
+                                <span className="ord-item-name">{it.itemName || it.menuItemName || it.comboName}</span>
+                              </span>
+                            ))}
+                            {items.length > 3 && (
+                              <span className="ord-item-more">+{items.length - 3} món khác</span>
+                            )}
+                            {items.length === 0 && (
+                              <span className="ord-item-empty">Chưa chọn món</span>
+                            )}
+                          </div>
+                          {order.note && (
+                            <div className="ord-note-hint">
+                              <span className="ord-note-tag">Ghi chú:</span> {order.note}
+                            </div>
                           )}
                         </div>
                       </td>
 
-                      {/* Tổng tiền */}
+                      {/* Cột 4: Tổng tiền */}
                       <td>
-                        <span className="ord-total-amount">
-                          {formatCurrency(order.totalAmount)}
-                        </span>
+                        <div className="ord-price-cell">
+                          <span className="ord-price-amount">{formatCurrency(order.totalAmount)}</span>
+                          <span className="ord-item-count">{items.length} món</span>
+                        </div>
                       </td>
 
-                      {/* Thời gian */}
+                      {/* Cột 5: Trạng thái & Quick change */}
                       <td>
-                        <span className="ord-time">{formatDateTime(order.createdAt)}</span>
+                        <div className="ord-status-cell">
+                          <span className={`ord-badge ${cfg.cls}`}>
+                            {cfg.label}
+                          </span>
+                          <select
+                            className="ord-quick-status-select"
+                            value={order.status}
+                            onChange={e => handleOrderStatusChange(order.id, e.target.value)}
+                            title="Đổi nhanh trạng thái"
+                          >
+                            <option value="PENDING">Chờ xác nhận</option>
+                            <option value="CONFIRMED">Đã nhận đơn</option>
+                            <option value="PREPARING">Đang nấu</option>
+                            <option value="SERVING">Đang phục vụ</option>
+                            <option value="COMPLETED">Hoàn tất</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                          </select>
+                        </div>
                       </td>
 
-                      {/* Trạng thái */}
+                      {/* Cột 6: Thao tác */}
                       <td>
-                        <span className={`ord-badge ${statusKey}`}>
-                          {STATUS_LABELS[order.status] || order.status}
-                        </span>
-                      </td>
-
-                      {/* Hành động */}
-                      <td>
-                        <div className="ord-actions">
+                        <div className="ord-action-buttons">
                           <button
-                            className="ord-btn-icon view"
-                            title="Xem chi tiết đơn hàng"
+                            type="button"
+                            className="ord-btn-action primary"
                             onClick={() => {
                               setSelectedOrder(order)
                               setShowDetailModal(true)
                             }}
                           >
-                            👁️
+                            Chi tiết
                           </button>
                           <button
-                            className="ord-btn-icon print"
-                            title="In hóa đơn tạm tính"
+                            type="button"
+                            className="ord-btn-action"
                             onClick={() => {
                               setSelectedOrder(order)
                               setShowBillModal(true)
                             }}
+                            title="Xem & in hóa đơn"
                           >
-                            🖨️
+                            In bill
                           </button>
                           <button
-                            className="ord-btn-icon delete"
-                            title="Xóa đơn"
+                            type="button"
+                            className="ord-btn-action danger"
                             onClick={() => setDeleteConfirmId(order.id)}
+                            title="Xóa đơn"
                           >
-                            🗑️
+                            Xóa
                           </button>
                         </div>
                       </td>
@@ -416,160 +605,386 @@ function OrdersPage() {
                 })}
               </tbody>
             </table>
-          )}
-        </div>
+          </div>
 
-        {/* ── MODAL: CHI TIẾT ĐƠN HÀNG (DÀNH CHO ADMIN XEM) ─────────── */}
+        ) : (
+
+          /* ── CARDS / GRID VIEW ────────────────────────────────── */
+          <div className="ord-cards-grid">
+            {paginatedOrders.map(order => {
+              const items = order.items || []
+              const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
+              return (
+                <div key={order.id} className="ord-card">
+                  {/* Card Head */}
+                  <div className="ord-card-head">
+                    <div className="ord-card-title-group">
+                      <span className="ord-card-id">#{order.id}</span>
+                      <span className="ord-card-table">Bàn {order.tableNumber || 'Mang đi'}</span>
+                    </div>
+                    <span className={`ord-badge ${cfg.cls}`}>{cfg.label}</span>
+                  </div>
+
+                  {/* Card Meta */}
+                  <div className="ord-card-meta">
+                    <span className="ord-card-time">{formatTimeOnly(order.createdAt)} · {formatDateOnly(order.createdAt)}</span>
+                    <span className="ord-card-ago">{getTimeAgo(order.createdAt)}</span>
+                  </div>
+
+                  {/* Card Items */}
+                  <div className="ord-card-items-list">
+                    {items.slice(0, 4).map((it, idx) => (
+                      <div key={idx} className="ord-card-item-row">
+                        <span className="ord-card-item-qty">{it.quantity}×</span>
+                        <span className="ord-card-item-name">{it.itemName || it.menuItemName || it.comboName}</span>
+                        <span className="ord-card-item-price">{formatCurrency(it.subtotal)}</span>
+                      </div>
+                    ))}
+                    {items.length > 4 && (
+                      <div className="ord-card-items-more">
+                        +{items.length - 4} món ăn khác...
+                      </div>
+                    )}
+                    {items.length === 0 && (
+                      <div className="ord-card-items-more">Chưa có món ăn nào</div>
+                    )}
+                  </div>
+
+                  {/* Note */}
+                  {order.note && (
+                    <div className="ord-card-note">
+                      <strong>Ghi chú:</strong> {order.note}
+                    </div>
+                  )}
+
+                  {/* Card Foot */}
+                  <div className="ord-card-foot">
+                    <div className="ord-card-total">
+                      <span className="label">Tổng cộng</span>
+                      <span className="val">{formatCurrency(order.totalAmount)}</span>
+                    </div>
+                    <div className="ord-card-actions">
+                      <button
+                        type="button"
+                        className="ord-btn-action primary"
+                        onClick={() => {
+                          setSelectedOrder(order)
+                          setShowDetailModal(true)
+                        }}
+                      >
+                        Chi tiết
+                      </button>
+                      <button
+                        type="button"
+                        className="ord-btn-action"
+                        onClick={() => {
+                          setSelectedOrder(order)
+                          setShowBillModal(true)
+                        }}
+                        title="In hóa đơn"
+                      >
+                        In bill
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── 4. PAGINATION FOOTER ───────────────────────────────── */}
+        {!loading && orders.length > 0 && (
+          <div className="ord-pagination-bar">
+            <div className="ord-pagination-info">
+              Hiển thị <strong>{Math.min((currentPage - 1) * pageSize + 1, orders.length)}</strong> đến{' '}
+              <strong>{Math.min(currentPage * pageSize, orders.length)}</strong> trên tổng số{' '}
+              <strong>{orders.length}</strong> đơn hàng
+            </div>
+            {totalPages > 1 && (
+              <div className="ord-pagination-controls">
+                <button
+                  type="button"
+                  className="ord-page-btn"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  Trước
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`ord-page-btn${currentPage === page ? ' active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="ord-page-btn"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  Sau
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 5. MODAL: CHI TIẾT ĐƠN HÀNG CHUYÊN SÂU ──────────────── */}
         {showDetailModal && selectedOrder && (
           <div className="ord-modal-overlay" onClick={() => setShowDetailModal(false)}>
-            <div className="ord-modal-box large" onClick={e => e.stopPropagation()}>
+            <div className="ord-modal-dialog" onClick={e => e.stopPropagation()}>
+              {/* Modal Head */}
               <div className="ord-modal-header">
-                <h2>
-                  <span>Chi tiết đơn hàng #{selectedOrder.id}</span>
-                  <span className="ord-table-badge">Bàn {selectedOrder.tableNumber}</span>
-                </h2>
-                <button className="ord-modal-close" onClick={() => setShowDetailModal(false)}>✕</button>
+                <div>
+                  <div className="ord-modal-headline">
+                    <h2>Đơn hàng #{selectedOrder.id}</h2>
+                    <span className="ord-table-badge">Bàn {selectedOrder.tableNumber || 'Mang đi'}</span>
+                  </div>
+                  <div className="ord-modal-subline">
+                    Tạo lúc {formatDateTime(selectedOrder.createdAt)} ({getTimeAgo(selectedOrder.createdAt)})
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="ord-modal-close"
+                  onClick={() => setShowDetailModal(false)}
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Thông tin đầu trang */}
-              <div className="ord-detail-top">
-                <div className="ord-detail-field">
-                  <span className="label">Thời gian tạo</span>
-                  <span className="val">{formatDateTime(selectedOrder.createdAt)}</span>
+              {/* Order Status Progress Stepper */}
+              <div className="ord-stepper-container">
+                <div className="ord-stepper-title">Tiến trình xử lý đơn hàng</div>
+                <div className="ord-stepper">
+                  {ORDER_STEPS.map((step, idx) => {
+                    const currentIndex = ORDER_STEPS.findIndex(s => s.key === selectedOrder.status)
+                    const isDone = currentIndex >= idx
+                    const isCurrent = selectedOrder.status === step.key
+                    const isCancelled = selectedOrder.status === 'CANCELLED'
+                    return (
+                      <div
+                        key={step.key}
+                        className={`ord-step-item${isDone && !isCancelled ? ' done' : ''}${isCurrent ? ' current' : ''}`}
+                        onClick={() => handleOrderStatusChange(selectedOrder.id, step.key)}
+                        title={`Bấm để chuyển sang: ${step.label}`}
+                      >
+                        <div className="ord-step-dot">{idx + 1}</div>
+                        <div className="ord-step-label">{step.label}</div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="ord-detail-field">
-                  <span className="label">Tổng tiền</span>
-                  <span className="val" style={{ color: '#b8860b', fontSize: '1.1rem' }}>
-                    {formatCurrency(selectedOrder.totalAmount)}
-                  </span>
+                {selectedOrder.status === 'CANCELLED' && (
+                  <div className="ord-cancelled-banner">
+                    Đơn hàng này hiện đang ở trạng thái <strong>ĐÃ HỦY</strong>.
+                  </div>
+                )}
+              </div>
+
+              {/* Order Summary Stats */}
+              <div className="ord-summary-bar">
+                <div className="ord-summary-box">
+                  <span className="lbl">Tổng thanh toán</span>
+                  <span className="val price">{formatCurrency(selectedOrder.totalAmount)}</span>
                 </div>
-                <div className="ord-detail-field">
-                  <span className="label">Trạng thái đơn</span>
-                  <select
-                    className="ord-status-select"
-                    value={selectedOrder.status}
-                    onChange={e => handleOrderStatusChange(selectedOrder.id, e.target.value)}
-                  >
-                    <option value="PENDING">Chờ xác nhận</option>
-                    <option value="CONFIRMED">Đã nhận đơn</option>
-                    <option value="PREPARING">Đang nấu</option>
-                    <option value="SERVING">Đang phục vụ</option>
-                    <option value="COMPLETED">Hoàn tất / Đã thanh toán</option>
-                    <option value="CANCELLED">Đã hủy</option>
-                  </select>
+                <div className="ord-summary-box">
+                  <span className="lbl">Số món trong đơn</span>
+                  <span className="val">{selectedOrder.items?.length || 0} món</span>
                 </div>
-                <div className="ord-detail-field">
-                  <span className="label">Ghi chú đơn</span>
+                <div className="ord-summary-box">
+                  <span className="lbl">Trạng thái hiện tại</span>
+                  <div className="ord-status-row">
+                    <span className={`ord-badge ${STATUS_CONFIG[selectedOrder.status]?.cls || ''}`}>
+                      {STATUS_CONFIG[selectedOrder.status]?.label || selectedOrder.status}
+                    </span>
+                    <select
+                      className="ord-quick-status-select"
+                      value={selectedOrder.status}
+                      onChange={e => handleOrderStatusChange(selectedOrder.id, e.target.value)}
+                    >
+                      <option value="PENDING">Chờ xác nhận</option>
+                      <option value="CONFIRMED">Đã nhận đơn</option>
+                      <option value="PREPARING">Đang nấu</option>
+                      <option value="SERVING">Đang phục vụ</option>
+                      <option value="COMPLETED">Hoàn tất</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="ord-summary-box">
+                  <span className="lbl">Ghi chú</span>
                   <span className="val">{selectedOrder.note || 'Không có'}</span>
                 </div>
               </div>
 
-              {/* Bảng danh sách món */}
-              <div>
-                <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#1e3527' }}>
-                  Danh sách món ăn ({selectedOrder.items?.length || 0})
-                </h3>
-
-                <table className="ord-detail-items-table">
-                  <thead>
-                    <tr>
-                      <th>Tên món</th>
-                      <th>Đơn giá</th>
-                      <th style={{ textAlign: 'center' }}>Số lượng</th>
-                      <th>Thành tiền</th>
-                      <th>Trạng thái món</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedOrder.items || []).map(item => (
-                      <tr key={item.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {item.image ? (
-                              <img src={getImageFullUrl(item.image)} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
-                            ) : (
-                              <span>🍲</span>
-                            )}
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{item.itemName}</div>
-                              {item.note && <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>📝 {item.note}</div>}
-                            </div>
-                          </div>
-                        </td>
-                        <td>{formatCurrency(item.unitPrice)}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                          {item.quantity}
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#b8860b' }}>
-                          {formatCurrency(item.subtotal)}
-                        </td>
-                        <td>
-                          <span className={`ord-item-status-chip ${item.status}`}>
-                            {ITEM_STATUS_LABELS[item.status] || item.status}
-                          </span>
-                        </td>
+              {/* Items Table */}
+              <div className="ord-items-detail-section">
+                <div className="ord-section-header">
+                  <h3>Danh sách món ăn chi tiết ({selectedOrder.items?.length || 0})</h3>
+                </div>
+                <div className="ord-detail-table-wrap">
+                  <table className="ord-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Món ăn</th>
+                        <th style={{ width: '120px' }}>Đơn giá</th>
+                        <th style={{ width: '80px', textAlign: 'center' }}>Số lượng</th>
+                        <th style={{ width: '130px' }}>Thành tiền</th>
+                        <th style={{ width: '150px' }}>Trạng thái món</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(selectedOrder.items || []).map(item => {
+                        const itemCfg = ITEM_STATUS_CONFIG[item.status] || ITEM_STATUS_CONFIG.PENDING
+                        const isUpdating = updatingItemStatusId === item.id
+                        return (
+                          <tr key={item.id}>
+                            <td>
+                              <div className="ord-item-info-cell">
+                                {item.image ? (
+                                  <img
+                                    src={getImageFullUrl(item.image)}
+                                    alt=""
+                                    className="ord-item-thumb"
+                                  />
+                                ) : (
+                                  <div className="ord-item-thumb-placeholder">Món</div>
+                                )}
+                                <div>
+                                  <div className="ord-item-main-title">{item.itemName || item.menuItemName || item.comboName}</div>
+                                  {item.note && (
+                                    <div className="ord-item-custom-note">
+                                      Ghi chú: {item.note}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td>{formatCurrency(item.unitPrice)}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                              {item.quantity}
+                            </td>
+                            <td style={{ fontWeight: 700, color: '#0f172a' }}>
+                              {formatCurrency(item.subtotal)}
+                            </td>
+                            <td>
+                              <div className="ord-item-status-wrapper">
+                                <span className={`ord-item-badge ${itemCfg.cls}`}>
+                                  {itemCfg.label}
+                                </span>
+                                <select
+                                  className="ord-item-status-select"
+                                  value={item.status}
+                                  disabled={isUpdating}
+                                  onChange={e => handleItemStatusChange(selectedOrder.id, item.id, e.target.value)}
+                                  title="Đổi trạng thái món"
+                                >
+                                  <option value="PENDING">Chờ nấu</option>
+                                  <option value="COOKING">Đang nấu</option>
+                                  <option value="SERVED">Đã lên món</option>
+                                  <option value="CANCELLED">Đã hủy</option>
+                                </select>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Modal footer */}
-              <div className="res-modal-footer" style={{ marginTop: '16px' }}>
-                <button
-                  type="button"
-                  className="ord-btn-refresh"
-                  onClick={() => setShowBillModal(true)}
-                >
-                  🖨️ Xem & In hóa đơn tạm tính
-                </button>
-                <button
-                  type="button"
-                  className="res-btn-cancel"
-                  onClick={() => setShowDetailModal(false)}
-                >
-                  Đóng
-                </button>
+              {/* Modal Footer */}
+              <div className="ord-modal-footer">
+                <div className="ord-modal-footer-left">
+                  <button
+                    type="button"
+                    className="ord-btn-danger-outline"
+                    onClick={() => setDeleteConfirmId(selectedOrder.id)}
+                  >
+                    Xóa đơn hàng
+                  </button>
+                </div>
+                <div className="ord-modal-footer-right">
+                  <button
+                    type="button"
+                    className="ord-btn-secondary"
+                    onClick={() => setShowBillModal(true)}
+                  >
+                    Xem hóa đơn in
+                  </button>
+                  <button
+                    type="button"
+                    className="ord-btn-primary"
+                    onClick={() => setShowDetailModal(false)}
+                  >
+                    Đóng
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── MODAL: IN & XEM HÓA ĐƠN TẠM TÍNH ──────────────────────── */}
+        {/* ── 6. MODAL: IN HÓA ĐƠN THANH TOÁN (BILL) ──────────────── */}
         {showBillModal && selectedOrder && (
           <div className="ord-modal-overlay" onClick={() => setShowBillModal(false)}>
-            <div className="ord-modal-box" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
+            <div className="ord-bill-dialog" onClick={e => e.stopPropagation()}>
               <div className="ord-modal-header">
-                <h2>Hóa đơn thanh toán</h2>
-                <button className="ord-modal-close" onClick={() => setShowBillModal(false)}>✕</button>
+                <h2>Hóa đơn tạm tính</h2>
+                <button
+                  type="button"
+                  className="ord-modal-close"
+                  onClick={() => setShowBillModal(false)}
+                >
+                  ✕
+                </button>
               </div>
 
-              <div className="ord-bill-container" id="printable-bill">
-                <div className="ord-bill-header">
-                  <h3>LOTUS RESTAURANT</h3>
-                  <p>Tinh hoa ẩm thực Việt</p>
-                  <p>Đ/c: 123 Đường Hoa Sen, TP. Hồ Chí Minh</p>
-                  <p>Hotline: 1900 6868</p>
+              <div className="ord-receipt-sheet" id="printable-bill">
+                <div className="ord-receipt-header">
+                  <div className="ord-receipt-brand">LOTUS RESTAURANT</div>
+                  <div className="ord-receipt-slogan">Ẩm Thực Đương Đại &amp; Trải Nghiệm Thượng Hạng</div>
+                  <div className="ord-receipt-contact">Đ/c: 123 Đường Hoa Sen, TP. Hồ Chí Minh</div>
+                  <div className="ord-receipt-contact">Hotline: 1900 6868 · www.lotusrestaurant.vn</div>
                 </div>
 
-                <div className="ord-bill-meta">
-                  <div>
-                    <div><strong>Hóa đơn:</strong> #ORD-{selectedOrder.id}</div>
-                    <div><strong>Bàn:</strong> {selectedOrder.tableNumber}</div>
+                <div className="ord-receipt-divider" />
+
+                <div className="ord-receipt-meta">
+                  <div className="ord-receipt-row">
+                    <span>Mã hóa đơn:</span>
+                    <strong>#ORD-{selectedOrder.id}</strong>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div><strong>Ngày:</strong> {formatDateTime(selectedOrder.createdAt)}</div>
-                    <div><strong>Trạng thái:</strong> {STATUS_LABELS[selectedOrder.status] || selectedOrder.status}</div>
+                  <div className="ord-receipt-row">
+                    <span>Bàn phục vụ:</span>
+                    <strong>Bàn {selectedOrder.tableNumber || 'Mang về'}</strong>
+                  </div>
+                  <div className="ord-receipt-row">
+                    <span>Thời gian:</span>
+                    <span>{formatDateTime(selectedOrder.createdAt)}</span>
+                  </div>
+                  <div className="ord-receipt-row">
+                    <span>Trạng thái:</span>
+                    <span>{STATUS_CONFIG[selectedOrder.status]?.label || selectedOrder.status}</span>
                   </div>
                 </div>
 
-                <table className="ord-bill-items">
+                <div className="ord-receipt-divider" />
+
+                <table className="ord-receipt-table">
                   <thead>
                     <tr>
-                      <th>Tên món</th>
-                      <th style={{ textAlign: 'center' }}>SL</th>
-                      <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ textAlign: 'right' }}>T.Tiền</th>
+                      <th style={{ textAlign: 'left' }}>Tên món</th>
+                      <th style={{ textAlign: 'center', width: '40px' }}>SL</th>
+                      <th style={{ textAlign: 'right', width: '80px' }}>Đơn giá</th>
+                      <th style={{ textAlign: 'right', width: '90px' }}>T.Tiền</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -577,83 +992,91 @@ function OrdersPage() {
                       .filter(i => i.status !== 'CANCELLED')
                       .map((item, idx) => (
                         <tr key={idx}>
-                          <td>{item.itemName}</td>
+                          <td>
+                            <div>{item.itemName || item.menuItemName || item.comboName}</div>
+                            {item.note && <div className="ord-receipt-item-note">({item.note})</div>}
+                          </td>
                           <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                           <td style={{ textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(item.subtotal)}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.subtotal)}</td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
 
-                <div className="ord-bill-footer">
-                  <div className="ord-bill-total-row">
+                <div className="ord-receipt-divider" />
+
+                <div className="ord-receipt-totals">
+                  <div className="ord-receipt-total-row final">
                     <span>TỔNG CỘNG:</span>
                     <span>{formatCurrency(selectedOrder.totalAmount)}</span>
                   </div>
-                  <p style={{ margin: '8px 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>
-                    Cảm ơn quý khách và hẹn gặp lại!
-                  </p>
+                </div>
+
+                <div className="ord-receipt-footer">
+                  <p>Xin cảm ơn quý khách và hẹn gặp lại!</p>
+                  <p className="ord-receipt-timestamp">In lúc: {new Date().toLocaleTimeString('vi-VN')} {new Date().toLocaleDateString('vi-VN')}</p>
                 </div>
               </div>
 
-              <div className="res-modal-footer">
+              <div className="ord-modal-footer">
                 <button
                   type="button"
-                  className="res-btn-cancel"
+                  className="ord-btn-secondary"
                   onClick={() => setShowBillModal(false)}
                 >
                   Đóng
                 </button>
                 <button
                   type="button"
-                  className="res-btn-submit"
+                  className="ord-btn-primary"
                   onClick={() => window.print()}
                 >
-                  🖨️ In ngay
+                  In hóa đơn
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── MODAL: XÁC NHẬN XÓA ĐƠN HÀNG ─────────────────────────── */}
+        {/* ── 7. MODAL: XÁC NHẬN XÓA ĐƠN HÀNG ─────────────────────── */}
         {deleteConfirmId && (
           <div className="ord-modal-overlay" onClick={() => setDeleteConfirmId(null)}>
-            <div className="res-confirm-box" onClick={e => e.stopPropagation()}>
-              <div className="confirm-icon">🗑️</div>
+            <div className="ord-dialog-confirm" onClick={e => e.stopPropagation()}>
+              <div className="ord-dialog-warning-icon">!</div>
               <h3>Xác nhận xóa đơn hàng?</h3>
-              <p>Đơn hàng #{deleteConfirmId} sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
-              <div className="res-confirm-btns">
+              <p>
+                Đơn hàng <strong>#{deleteConfirmId}</strong> sẽ bị xóa vĩnh viễn khỏi cơ sở dữ liệu.
+                Hành động này không thể hoàn tác.
+              </p>
+              <div className="ord-dialog-actions">
                 <button
                   type="button"
-                  className="res-btn-cancel"
+                  className="ord-btn-secondary"
                   onClick={() => setDeleteConfirmId(null)}
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
                   type="button"
-                  className="res-btn-danger"
+                  className="ord-btn-danger"
                   onClick={handleDeleteOrderConfirm}
                 >
-                  Xóa đơn hàng
+                  Xác nhận xóa
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── TOAST NOTIFICATION ───────────────────────────────────── */}
+        {/* ── 8. TOAST NOTIFICATIONS ──────────────────────────────── */}
         {toast && (
-          <div className={`ord-toast ${toast.type}`}>
-            {toast.type === 'success' ? '✓ ' : '✕ '}
-            {toast.message}
+          <div className={`ord-toast-item ${toast.type}`}>
+            <span className="ord-toast-dot" />
+            <span className="ord-toast-msg">{toast.message}</span>
           </div>
         )}
       </div>
     </AdminLayout>
   )
 }
-
-export default OrdersPage

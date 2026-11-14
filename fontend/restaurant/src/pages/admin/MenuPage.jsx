@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
-import './MenuManagement.css'
+import '../../styles/pages/admin/MenuManagement.css'
 import {
   getAllMenuItems,
   createMenuItem,
@@ -575,7 +575,7 @@ function MenuPage() {
           <div className="form-page-card">
             <div className="form-page-header">
               <div className="form-page-header-title">
-                <h2>{editingItem ? '✏️ Chỉnh sửa thông tin món ăn' : '🍲 Tạo món ăn mới'}</h2>
+                <h2>{editingItem ? 'Chỉnh sửa thông tin món ăn' : 'Tạo món ăn mới'}</h2>
               </div>
               <button
                 type="button"
@@ -592,7 +592,7 @@ function MenuPage() {
                 {/* CỘT TRÁI: THÔNG TIN CHI TIẾT */}
                 <div className="form-column-main">
                   <div className="form-section-box">
-                    <h4 className="form-section-title">📝 Thông tin cơ bản</h4>
+                    <h4 className="form-section-title">Thông tin cơ bản</h4>
 
                     <div className="form-group-large">
                       <label>Tên món ăn <span style={{ color: '#ef5350' }}>*</span></label>
@@ -646,14 +646,14 @@ function MenuPage() {
                         value={itemFormData.status}
                         onChange={(e) => setItemFormData({ ...itemFormData, status: e.target.value })}
                       >
-                        <option value="ACTIVE">🟢 Hiển thị</option>
-                        <option value="INACTIVE">⚪ Ẩn</option>
+                        <option value="ACTIVE">Hiển thị</option>
+                        <option value="INACTIVE">Ẩn</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="form-section-box">
-                    <h4 className="form-section-title">🌿 Nguyên liệu & Mô tả</h4>
+                    <h4 className="form-section-title">Nguyên liệu & Mô tả</h4>
 
                     <div className="form-group-large">
                       <label>Thành phần chính</label>
@@ -684,7 +684,7 @@ function MenuPage() {
                 {/* CỘT PHẢI: UPLOAD HÌNH ẢNH & XEM TRƯỚC */}
                 <div className="form-column-side">
                   <div className="form-section-box">
-                    <h4 className="form-section-title">📷 Hình ảnh món ăn</h4>
+                    <h4 className="form-section-title">Hình ảnh món ăn</h4>
 
                     <input
                       type="file"
@@ -703,14 +703,14 @@ function MenuPage() {
                             className="overlay-btn"
                             onClick={() => fileInputRef.current?.click()}
                           >
-                            🔄 Đổi ảnh khác
+                            Đổi ảnh khác
                           </button>
                           <button
                             type="button"
                             className="overlay-btn danger"
                             onClick={handleRemoveImage}
                           >
-                            ✕ Xóa ảnh
+                            Xóa ảnh
                           </button>
                         </div>
                       </div>
@@ -719,7 +719,7 @@ function MenuPage() {
                         className="image-upload-dropzone-large"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        <span className="dropzone-icon-large">🖼️</span>
+                        <span className="dropzone-text-prompt">Tải ảnh lên</span>
                         <span className="dropzone-text-large">Chọn 1 hình ảnh từ máy tính</span>
                         <span className="dropzone-subtext-large">
                           Hỗ trợ định dạng JPG, PNG, WEBP (Dung lượng tối đa 10MB)
@@ -733,7 +733,7 @@ function MenuPage() {
                             fileInputRef.current?.click()
                           }}
                         >
-                          📂 Duyệt file trên máy
+                          Chọn tệp ảnh
                         </button>
                       </div>
                     )}
@@ -741,7 +741,7 @@ function MenuPage() {
 
                   {/* LIVE PREVIEW */}
                   <div className="form-section-box">
-                    <h4 className="form-section-title">👁️ Xem trước hiển thị trên Menu</h4>
+                    <h4 className="form-section-title">Xem trước hiển thị trên Menu</h4>
                     <div className="live-preview-box">
                       {imagePreview ? (
                         <img src={imagePreview} alt="Preview" className="live-preview-img" />
@@ -755,7 +755,7 @@ function MenuPage() {
                             fontSize: '1.8rem',
                           }}
                         >
-                          🥗
+                          <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontWeight: 600 }}>Chưa có ảnh</span>
                         </div>
                       )}
                       <div className="live-preview-info">
@@ -763,7 +763,7 @@ function MenuPage() {
                           {itemFormData.name || 'Tên món ăn'}
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#6a7e71' }}>
-                          🏷️ {selectedCategoryObj ? selectedCategoryObj.name : 'Danh mục'}
+                          {selectedCategoryObj ? selectedCategoryObj.name : 'Danh mục'}
                         </span>
                         <span className="live-preview-price">
                           {itemFormData.price ? formatCurrency(itemFormData.price) : '0 ₫'}
@@ -787,9 +787,9 @@ function MenuPage() {
                   {formSubmitting ? (
                     '⏳ Đang lưu dữ liệu...'
                   ) : editingItem ? (
-                    '💾 Cập nhật món ăn'
+                    'Cập nhật món ăn'
                   ) : (
-                    '✨ Thêm món ăn ngay'
+                    'Thêm món ăn'
                   )}
                 </button>
               </div>
@@ -804,7 +804,7 @@ function MenuPage() {
           <div className="form-page-card" style={{ maxWidth: 700, margin: '0 auto' }}>
             <div className="form-page-header">
               <div className="form-page-header-title">
-                <h2>{editingCategory ? '✏️ Chỉnh sửa danh mục' : '🏷️ Thêm danh mục mới'}</h2>
+                <h2>{editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}</h2>
               </div>
               <button
                 type="button"
@@ -870,9 +870,9 @@ function MenuPage() {
                   {formSubmitting ? (
                     '⏳ Đang lưu...'
                   ) : editingCategory ? (
-                    '💾 Cập nhật danh mục'
+                    'Cập nhật danh mục'
                   ) : (
-                    '✨ Thêm danh mục ngay'
+                    'Thêm danh mục'
                   )}
                 </button>
               </div>
@@ -887,7 +887,7 @@ function MenuPage() {
           <div className="form-page-card">
             <div className="form-page-header">
               <div className="form-page-header-title">
-                <h2>{editingCombo ? '✏️ Chỉnh sửa thông tin Combo' : '🍱 Tạo Combo mới'}</h2>
+                <h2>{editingCombo ? 'Chỉnh sửa thông tin Combo' : 'Tạo Combo mới'}</h2>
               </div>
               <button
                 type="button"
@@ -904,7 +904,7 @@ function MenuPage() {
                 {/* CỘT TRÁI: THÔNG TIN CHI TIẾT & CHỌN MÓN VÀO COMBO */}
                 <div className="form-column-main">
                   <div className="form-section-box">
-                    <h4 className="form-section-title">📝 Thông tin cơ bản</h4>
+                    <h4 className="form-section-title">Thông tin cơ bản</h4>
 
                     <div className="form-group-large">
                       <label>Tên Combo <span style={{ color: '#ef5350' }}>*</span></label>
@@ -939,8 +939,8 @@ function MenuPage() {
                           value={comboFormData.status}
                           onChange={(e) => setComboFormData({ ...comboFormData, status: e.target.value })}
                         >
-                          <option value="ACTIVE">🟢 Hiển thị</option>
-                          <option value="INACTIVE">⚪ Ẩn</option>
+                          <option value="ACTIVE">Hiển thị</option>
+                          <option value="INACTIVE">Ẩn</option>
                         </select>
                       </div>
                     </div>
@@ -948,7 +948,7 @@ function MenuPage() {
 
                   {/* QUẢN LÝ CÁC MÓN ĂN TRONG COMBO (COMBO ITEMS) */}
                   <div className="form-section-box">
-                    <h4 className="form-section-title">🍱 Danh sách món ăn trong Combo</h4>
+                    <h4 className="form-section-title">Danh sách món ăn trong Combo</h4>
 
                     <div className="combo-items-builder">
                       <div className="combo-item-add-row">
@@ -995,7 +995,7 @@ function MenuPage() {
                       {/* BẢNG CÁC MÓN ĐÃ CHỌN TRONG COMBO */}
                       {selectedComboItems.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '16px', color: '#8b9c91', fontSize: '0.88rem' }}>
-                          💡 Chưa có món ăn nào được chọn. Hãy chọn món ở trên để đưa vào Combo!
+                          Chưa có món ăn nào được chọn. Hãy chọn món ở trên để đưa vào Combo!
                         </div>
                       ) : (
                         <>
@@ -1049,7 +1049,7 @@ function MenuPage() {
                                       style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                                       onClick={() => handleRemoveDishFromCombo(idx)}
                                     >
-                                      ✕ Bỏ món
+                                      Bỏ món
                                     </button>
                                   </td>
                                 </tr>
@@ -1068,7 +1068,7 @@ function MenuPage() {
                             <div>
                               {savingsAmount > 0 ? (
                                 <span style={{ color: '#2e7d32', fontWeight: 700 }}>
-                                  🎉 Tiết kiệm cho khách hàng: {formatCurrency(savingsAmount)}
+                                  Tiết kiệm cho khách hàng: {formatCurrency(savingsAmount)}
                                 </span>
                               ) : (
                                 <span style={{ color: '#ef6c00' }}>
@@ -1083,7 +1083,7 @@ function MenuPage() {
                   </div>
 
                   <div className="form-section-box">
-                    <h4 className="form-section-title">📝 Ghi chú & Mô tả khác</h4>
+                    <h4 className="form-section-title">Ghi chú & Mô tả</h4>
 
                     <div className="form-group-large">
                       <label>Mô tả bổ sung (Khẩu phần, lưu ý phục vụ, ưu đãi đi kèm...)</label>
@@ -1102,7 +1102,7 @@ function MenuPage() {
                 {/* CỘT PHẢI: UPLOAD HÌNH ẢNH & XEM TRƯỚC COMBO */}
                 <div className="form-column-side">
                   <div className="form-section-box">
-                    <h4 className="form-section-title">📷 Hình ảnh Combo</h4>
+                    <h4 className="form-section-title">Hình ảnh Combo</h4>
 
                     <input
                       type="file"
@@ -1121,14 +1121,14 @@ function MenuPage() {
                             className="overlay-btn"
                             onClick={() => comboFileInputRef.current?.click()}
                           >
-                            🔄 Đổi ảnh khác
+                            Đổi ảnh khác
                           </button>
                           <button
                             type="button"
                             className="overlay-btn danger"
                             onClick={handleRemoveComboImage}
                           >
-                            ✕ Xóa ảnh
+                            Xóa ảnh
                           </button>
                         </div>
                       </div>
@@ -1137,7 +1137,7 @@ function MenuPage() {
                         className="image-upload-dropzone-large"
                         onClick={() => comboFileInputRef.current?.click()}
                       >
-                        <span className="dropzone-icon-large">🍱</span>
+                        <span className="dropzone-text-prompt">Tải ảnh lên</span>
                         <span className="dropzone-text-large">Chọn hình ảnh cho Combo</span>
                         <span className="dropzone-subtext-large">
                           Hỗ trợ định dạng JPG, PNG, WEBP (Dung lượng tối đa 10MB)
@@ -1151,7 +1151,7 @@ function MenuPage() {
                             comboFileInputRef.current?.click()
                           }}
                         >
-                          📂 Duyệt file trên máy
+                          Chọn tệp ảnh
                         </button>
                       </div>
                     )}
@@ -1159,7 +1159,7 @@ function MenuPage() {
 
                   {/* LIVE PREVIEW COMBO */}
                   <div className="form-section-box">
-                    <h4 className="form-section-title">👁️ Xem trước hiển thị Combo</h4>
+                    <h4 className="form-section-title">Xem trước hiển thị Combo</h4>
                     <div className="live-preview-box" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                         {comboImagePreview ? (
@@ -1174,7 +1174,7 @@ function MenuPage() {
                               fontSize: '1.8rem',
                             }}
                           >
-                            🍱
+                            <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontWeight: 600 }}>Chưa có ảnh</span>
                           </div>
                         )}
                         <div className="live-preview-info">
@@ -1182,7 +1182,7 @@ function MenuPage() {
                             {comboFormData.name || 'Tên Combo'}
                           </span>
                           <span style={{ fontSize: '0.78rem', color: '#ef6c00', fontWeight: 600 }}>
-                            🔥 COMBO TIẾT KIỆM ({selectedComboItems.length} món)
+                            COMBO TIẾT KIỆM ({selectedComboItems.length} món)
                           </span>
                           <span className="live-preview-price">
                             {comboFormData.price ? formatCurrency(comboFormData.price) : '0 ₫'}
@@ -1218,9 +1218,9 @@ function MenuPage() {
                   {formSubmitting ? (
                     '⏳ Đang lưu dữ liệu...'
                   ) : editingCombo ? (
-                    '💾 Cập nhật Combo'
+                    'Cập nhật Combo'
                   ) : (
-                    '✨ Thêm Combo ngay'
+                    'Thêm Combo'
                   )}
                 </button>
               </div>
@@ -1239,21 +1239,21 @@ function MenuPage() {
                 className={`menu-tab-btn ${activeTab === 'items' ? 'active' : ''}`}
                 onClick={() => setActiveTab('items')}
               >
-                <span>🍽️ Danh sách món ăn</span>
+                <span>Danh sách món ăn</span>
                 <span className="tab-badge">{totalItems}</span>
               </button>
               <button
                 className={`menu-tab-btn ${activeTab === 'combos' ? 'active' : ''}`}
                 onClick={() => setActiveTab('combos')}
               >
-                <span>🍱 Quản lý Combo</span>
+                <span>Quản lý Combo</span>
                 <span className="tab-badge">{totalCombos}</span>
               </button>
               <button
                 className={`menu-tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
                 onClick={() => setActiveTab('categories')}
               >
-                <span>🏷️ Quản lý danh mục</span>
+                <span>Quản lý danh mục</span>
                 <span className="tab-badge">{totalCategories}</span>
               </button>
             </div>
@@ -1261,21 +1261,21 @@ function MenuPage() {
             {/* STATS SUMMARY CHIPS */}
             <div className="menu-stats-row">
               <div className="stat-chip">
-                <div className="stat-chip-icon green">🍲</div>
+                
                 <div className="stat-chip-info">
                   <span className="stat-chip-val">{totalItems}</span>
                   <span className="stat-chip-label">Tổng món ({activeCount} hiển thị)</span>
                 </div>
               </div>
               <div className="stat-chip">
-                <div className="stat-chip-icon orange">🍱</div>
+                
                 <div className="stat-chip-info">
                   <span className="stat-chip-val">{totalCombos}</span>
                   <span className="stat-chip-label">Tổng Combo ({activeCombosCount} hiển thị)</span>
                 </div>
               </div>
               <div className="stat-chip">
-                <div className="stat-chip-icon blue">📁</div>
+                
                 <div className="stat-chip-info">
                   <span className="stat-chip-val">{totalCategories}</span>
                   <span className="stat-chip-label">Danh mục món</span>
@@ -1289,7 +1289,7 @@ function MenuPage() {
                 <div className="filter-bar">
                   <div className="filter-left">
                     <div className="search-box">
-                      <span className="search-icon">🔍</span>
+                      
                       <input
                         type="text"
                         placeholder="Tìm theo tên món ăn, nguyên liệu..."
@@ -1317,8 +1317,8 @@ function MenuPage() {
                       onChange={(e) => setFilterStatus(e.target.value)}
                     >
                       <option value="">-- Tất cả trạng thái --</option>
-                      <option value="ACTIVE">🟢 Hiển thị</option>
-                      <option value="INACTIVE">⚪ Ẩn</option>
+                      <option value="ACTIVE">Hiển thị</option>
+                      <option value="INACTIVE">Ẩn</option>
                     </select>
                   </div>
 
@@ -1332,11 +1332,11 @@ function MenuPage() {
                           setSearchKeyword('')
                         }}
                       >
-                        ✕ Xóa lọc
+                        Xóa lọc
                       </button>
                     )}
                     <button className="btn-secondary" onClick={loadData} title="Làm mới">
-                      🔄 Làm mới
+                      Làm mới
                     </button>
                     <button className="btn-primary-large" onClick={handleOpenCreateItem}>
                       + Thêm món ăn mới
@@ -1352,7 +1352,7 @@ function MenuPage() {
                     </div>
                   ) : menuItems.length === 0 ? (
                     <div className="table-empty-state">
-                      <div className="icon">🍲</div>
+                      
                       <p>Chưa có món ăn nào trong thực đơn.</p>
                       <button
                         className="btn-primary-large"
@@ -1385,18 +1385,18 @@ function MenuPage() {
                                       alt={item.name}
                                       className="item-thumb-img"
                                       onError={(e) => {
-                                        e.target.style.display = 'none'
-                                        if (e.target.nextSibling) {
-                                          e.target.nextSibling.style.display = 'block'
+                                        e.currentTarget.style.display = 'none'
+                                        if (e.currentTarget.nextElementSibling) {
+                                          e.currentTarget.nextElementSibling.style.display = 'flex'
                                         }
                                       }}
                                     />
                                   ) : null}
                                   <span
-                                    className="item-thumb-placeholder"
-                                    style={{ display: item.image ? 'none' : 'block' }}
+                                    className="item-thumb-empty"
+                                    style={{ display: item.image ? 'none' : 'flex' }}
                                   >
-                                    🥗
+                                    Chưa có ảnh
                                   </span>
                                 </div>
                                 <div className="item-meta">
@@ -1406,7 +1406,7 @@ function MenuPage() {
                                       className="item-ingredients"
                                       title={item.mainIngredients}
                                     >
-                                      🌿 {item.mainIngredients}
+                                      {item.mainIngredients}
                                     </span>
                                   )}
                                 </div>
@@ -1454,7 +1454,7 @@ function MenuPage() {
                 <div className="filter-bar">
                   <div className="filter-left">
                     <div className="search-box">
-                      <span className="search-icon">🔍</span>
+                      
                       <input
                         type="text"
                         placeholder="Tìm theo tên combo, mô tả món..."
@@ -1469,8 +1469,8 @@ function MenuPage() {
                       onChange={(e) => setFilterComboStatus(e.target.value)}
                     >
                       <option value="">-- Tất cả trạng thái --</option>
-                      <option value="ACTIVE">🟢 Hiển thị</option>
-                      <option value="INACTIVE">⚪ Ẩn</option>
+                      <option value="ACTIVE">Hiển thị</option>
+                      <option value="INACTIVE">Ẩn</option>
                     </select>
                   </div>
 
@@ -1483,11 +1483,11 @@ function MenuPage() {
                           setSearchComboKeyword('')
                         }}
                       >
-                        ✕ Xóa lọc
+                        Xóa lọc
                       </button>
                     )}
                     <button className="btn-secondary" onClick={loadData} title="Làm mới">
-                      🔄 Làm mới
+                      Làm mới
                     </button>
                     <button className="btn-primary-large" onClick={handleOpenCreateCombo}>
                       + Thêm combo mới
@@ -1503,7 +1503,7 @@ function MenuPage() {
                     </div>
                   ) : filteredCombos.length === 0 ? (
                     <div className="table-empty-state">
-                      <div className="icon">🍱</div>
+                      
                       <p>
                         {combos.length === 0
                           ? 'Chưa có Combo nào được tạo trong hệ thống.'
@@ -1539,18 +1539,18 @@ function MenuPage() {
                                       alt={combo.name}
                                       className="item-thumb-img"
                                       onError={(e) => {
-                                        e.target.style.display = 'none'
-                                        if (e.target.nextSibling) {
-                                          e.target.nextSibling.style.display = 'block'
+                                        e.currentTarget.style.display = 'none'
+                                        if (e.currentTarget.nextElementSibling) {
+                                          e.currentTarget.nextElementSibling.style.display = 'flex'
                                         }
                                       }}
                                     />
                                   ) : null}
                                   <span
-                                    className="item-thumb-placeholder"
-                                    style={{ display: combo.image ? 'none' : 'block' }}
+                                    className="item-thumb-empty"
+                                    style={{ display: combo.image ? 'none' : 'flex' }}
                                   >
-                                    🍱
+                                    Chưa có ảnh
                                   </span>
                                 </div>
                                 <div className="item-meta">
@@ -1575,7 +1575,7 @@ function MenuPage() {
                                       title={combo.description}
                                       style={{ maxWidth: 380 }}
                                     >
-                                      📝 {combo.description}
+                                      {combo.description}
                                     </span>
                                   )}
                                   {/* CÁC MÓN ĂN TRONG COMBO */}
@@ -1640,7 +1640,7 @@ function MenuPage() {
                   </div>
                 ) : categories.length === 0 ? (
                   <div className="table-empty-state">
-                    <div className="icon">🏷️</div>
+                    
                     <p>Chưa có danh mục nào.</p>
                     <button
                       className="btn-primary-large"
@@ -1710,7 +1710,7 @@ function MenuPage() {
           ======================================================== */}
       {toast && (
         <div className={`toast-notification ${toast.type}`}>
-          <span>{toast.type === 'error' ? '❌' : '✅'}</span>
+          
           <span>{toast.message}</span>
         </div>
       )}

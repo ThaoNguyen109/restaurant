@@ -15,6 +15,7 @@ import KitchenPage from '../pages/staff/KitchenPage'
 import CashierPage from '../pages/staff/CashierPage'
 import CustomerPage from '../pages/customer/CustomerPage'
 import CustomerMenuPage from '../pages/customer/CustomerMenuPage'
+import CustomerReservationPage from '../pages/customer/CustomerReservationPage'
 import StaffReservationsPage from '../pages/staff/StaffReservationsPage'
 import VNPayReturnPage from '../pages/payment/VNPayReturnPage'
 import ProtectedRoute from '../components/ProtectedRoute'
@@ -40,6 +41,14 @@ export const router = createBrowserRouter([
   {
     path: '/customer/menu',
     element: <CustomerMenuPage />,
+  },
+  {
+    path: '/customer/reservation',
+    element: <CustomerReservationPage />,
+  },
+  {
+    path: '/reservation',
+    element: <CustomerReservationPage />,
   },
   {
     path: '/customer',

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout'
-import './TablesPage.css'
+import '../../styles/pages/admin/TablesPage.css'
 import {
   getAllTables,
   createTable,
@@ -13,56 +13,38 @@ import {
 // Constants
 // ────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
-  { value: 'AVAILABLE',    label: 'Trống',      icon: '🟢' },
-  { value: 'OCCUPIED',     label: 'Đang dùng',  icon: '🔴' },
-  { value: 'RESERVED',     label: 'Đặt trước',  icon: '🟡' },
-  { value: 'MAINTENANCE',  label: 'Bảo trì',    icon: '🟣' },
-  { value: 'INACTIVE',     label: 'Ngừng dùng', icon: '⚫' },
+  { value: 'ALL',         label: 'Tất cả' },
+  { value: 'AVAILABLE',   label: 'Bàn trống',    cls: 'st-available'   },
+  { value: 'OCCUPIED',    label: 'Đang dùng',    cls: 'st-occupied'    },
+  { value: 'RESERVED',    label: 'Đặt trước',    cls: 'st-reserved'    },
+  { value: 'MAINTENANCE', label: 'Bảo trì',      cls: 'st-maintenance' },
+  { value: 'INACTIVE',    label: 'Ngừng dùng',   cls: 'st-inactive'    },
 ]
 
-const STATUS_CSS = {
-  AVAILABLE:   'available',
-  OCCUPIED:    'occupied',
-  RESERVED:    'reserved',
-  MAINTENANCE: 'maintenance',
-  INACTIVE:    'inactive',
-}
-
-const STATUS_LABEL = {
-  AVAILABLE:   'Trống',
-  OCCUPIED:    'Đang dùng',
-  RESERVED:    'Đặt trước',
-  MAINTENANCE: 'Bảo trì',
-  INACTIVE:    'Ngừng dùng',
-}
-
-const TABLE_ICON = {
-  AVAILABLE:   '🪑',
-  OCCUPIED:    '🍽️',
-  RESERVED:    '📋',
-  MAINTENANCE: '🔧',
-  INACTIVE:    '❌',
+const STATUS_MAP = {
+  AVAILABLE:   { label: 'Bàn trống',    cls: 'st-available'   },
+  OCCUPIED:    { label: 'Đang dùng',    cls: 'st-occupied'    },
+  RESERVED:    { label: 'Đặt trước',    cls: 'st-reserved'    },
+  MAINTENANCE: { label: 'Bảo trì',      cls: 'st-maintenance' },
+  INACTIVE:    { label: 'Ngừng dùng',   cls: 'st-inactive'    },
 }
 
 const EMPTY_FORM = { tableNumber: '', capacity: '', status: 'AVAILABLE' }
 
-// ────────────────────────────────────────────────────────────────
-// Component
-// ────────────────────────────────────────────────────────────────
-function TablesPage() {
-  const [tables, setTables]         = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [viewMode, setViewMode]     = useState('grid')   // 'grid' | 'list'
+export default function TablesPage() {
+  const [tables, setTables]             = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [viewMode, setViewMode]         = useState('grid') // 'grid' | 'table'
   const [filterStatus, setFilterStatus] = useState('ALL')
-  const [search, setSearch]         = useState('')
-  const [toast, setToast]           = useState(null)
+  const [search, setSearch]             = useState('')
+  const [toast, setToast]               = useState(null)
 
-  // Modal
-  const [showForm, setShowForm]     = useState(false)
-  const [editTarget, setEditTarget] = useState(null)    // null = add, object = edit
-  const [formData, setFormData]     = useState(EMPTY_FORM)
-  const [formErrors, setFormErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
+  // Modal Thêm / Sửa
+  const [showForm, setShowForm]         = useState(false)
+  const [editTarget, setEditTarget]     = useState(null) // null = add, object = edit
+  const [formData, setFormData]         = useState(EMPTY_FORM)
+  const [formErrors, setFormErrors]     = useState({})
+  const [submitting, setSubmitting]     = useState(false)
 
   // Confirm delete
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -73,7 +55,7 @@ function TablesPage() {
     try {
       setLoading(true)
       const data = await getAllTables()
-      setTables(data)
+      setTables(Array.isArray(data) ? data : [])
     } catch (err) {
       showToast(err.message || 'Không thể tải danh sách bàn', 'error')
     } finally {
@@ -89,23 +71,25 @@ function TablesPage() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  // ── Derived stats ──────────────────────────────────────────────
-  const stats = {
+  // ── Stats ──────────────────────────────────────────────────────
+  const stats = useMemo(() => ({
     all:         tables.length,
     available:   tables.filter(t => t.status === 'AVAILABLE').length,
     occupied:    tables.filter(t => t.status === 'OCCUPIED').length,
     reserved:    tables.filter(t => t.status === 'RESERVED').length,
     maintenance: tables.filter(t => t.status === 'MAINTENANCE').length,
-  }
+  }), [tables])
 
   // ── Filtered list ──────────────────────────────────────────────
-  const filteredTables = tables.filter(t => {
-    const matchStatus = filterStatus === 'ALL' || t.status === filterStatus
-    const matchSearch = search === '' ||
-      String(t.tableNumber).includes(search) ||
-      STATUS_LABEL[t.status]?.toLowerCase().includes(search.toLowerCase())
-    return matchStatus && matchSearch
-  })
+  const filteredTables = useMemo(() => {
+    return tables.filter(t => {
+      const matchStatus = filterStatus === 'ALL' || t.status === filterStatus
+      const matchSearch = search.trim() === '' ||
+        String(t.tableNumber).includes(search.trim()) ||
+        STATUS_MAP[t.status]?.label.toLowerCase().includes(search.toLowerCase())
+      return matchStatus && matchSearch
+    })
+  }, [tables, filterStatus, search])
 
   // ── Form helpers ───────────────────────────────────────────────
   const openAddForm = () => {
@@ -136,7 +120,7 @@ function TablesPage() {
       errors.tableNumber = 'Số bàn phải là số nguyên dương'
     }
     if (!formData.capacity || isNaN(cap) || cap < 1 || cap > 100) {
-      errors.capacity = 'Sức chứa từ 1 đến 100 người'
+      errors.capacity = 'Sức chứa hợp lệ từ 1 đến 100 người'
     }
     if (!formData.status) {
       errors.status = 'Vui lòng chọn trạng thái'
@@ -159,44 +143,40 @@ function TablesPage() {
       setSubmitting(true)
       if (editTarget) {
         await updateTable(editTarget.id, payload)
-        showToast(`Cập nhật bàn số ${payload.tableNumber} thành công`)
+        showToast(`Đã cập nhật Bàn ${payload.tableNumber} thành công`)
       } else {
         await createTable(payload)
-        showToast(`Thêm bàn số ${payload.tableNumber} thành công`)
+        showToast(`Đã thêm Bàn ${payload.tableNumber} mới thành công`)
       }
-      setShowForm(false)
+      closeForm()
       loadTables()
     } catch (err) {
-      showToast(err.message || 'Thao tác thất bại', 'error')
+      showToast(err.message || 'Lưu bàn thất bại', 'error')
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Quick status change ────────────────────────────────────────
-  const handleQuickStatus = async (id, newStatus, tableNumber) => {
+  const handleQuickStatus = async (tableId, newStatus, tableNumber) => {
     try {
-      await updateTableStatus(id, newStatus)
-      setTables(prev =>
-        prev.map(t => t.id === id ? { ...t, status: newStatus } : t)
-      )
-      showToast(`Bàn ${tableNumber}: đổi sang "${STATUS_LABEL[newStatus]}"`)
+      await updateTableStatus(tableId, newStatus)
+      showToast(`Đã đổi trạng thái Bàn ${tableNumber} sang "${STATUS_MAP[newStatus]?.label}"`)
+      setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: newStatus } : t))
     } catch (err) {
-      showToast(err.message || 'Cập nhật trạng thái thất bại', 'error')
+      showToast(err.message || 'Không thể đổi trạng thái', 'error')
     }
   }
 
-  // ── Delete helpers ─────────────────────────────────────────────
   const openDeleteConfirm = (table) => { setDeleteTarget(table) }
   const closeDeleteConfirm = () => { setDeleteTarget(null) }
 
-  const confirmDelete = async () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return
     try {
       setDeleting(true)
       await deleteTable(deleteTarget.id)
-      showToast(`Đã xóa bàn số ${deleteTarget.tableNumber}`)
-      setDeleteTarget(null)
+      showToast(`Đã xóa Bàn ${deleteTarget.tableNumber} khỏi hệ thống`)
+      closeDeleteConfirm()
       loadTables()
     } catch (err) {
       showToast(err.message || 'Xóa bàn thất bại', 'error')
@@ -205,346 +185,423 @@ function TablesPage() {
     }
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // Render helpers
-  // ────────────────────────────────────────────────────────────────
-  const renderStatusBadge = (status) => (
-    <span className={`ts-badge ts-${STATUS_CSS[status] || 'inactive'}`}>
-      {STATUS_LABEL[status] || status}
-    </span>
-  )
-
-  const renderGridCard = (table) => (
-    <div
-      key={table.id}
-      className={`table-card-item ${STATUS_CSS[table.status] || 'inactive'}`}
-    >
-      <div className="table-icon-wrap">
-        {TABLE_ICON[table.status] || '🪑'}
-      </div>
-      <div className="table-card-number">Bàn {table.tableNumber}</div>
-      <div className="table-card-capacity">
-        <span>👥</span>
-        <span>{table.capacity} người</span>
-      </div>
-      <div className={`table-card-status`}>
-        {STATUS_LABEL[table.status] || table.status}
-      </div>
-      <div className="table-card-actions">
-        <button
-          className="btn-edit-sm"
-          onClick={(e) => { e.stopPropagation(); openEditForm(table) }}
-          title="Chỉnh sửa"
-        >
-          ✏️ Sửa
-        </button>
-        <button
-          className="btn-delete-sm"
-          onClick={(e) => { e.stopPropagation(); openDeleteConfirm(table) }}
-          title="Xóa bàn"
-        >
-          🗑️ Xóa
-        </button>
-      </div>
-    </div>
-  )
-
-  const renderListRow = (table) => (
-    <tr key={table.id}>
-      <td>
-        <div className="table-num-badge">{table.tableNumber}</div>
-      </td>
-      <td>
-        <div className="capacity-display">
-          <span>👥</span>
-          <span>{table.capacity} người</span>
-        </div>
-      </td>
-      <td>{renderStatusBadge(table.status)}</td>
-      <td>
-        <select
-          className="status-quick-select"
-          value={table.status}
-          onChange={(e) => handleQuickStatus(table.id, e.target.value, table.tableNumber)}
-        >
-          {STATUS_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>
-              {opt.icon} {opt.label}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td>
-        <div className="tbl-actions">
-          <button
-            className="btn-icon edit"
-            onClick={() => openEditForm(table)}
-            title="Chỉnh sửa bàn"
-          >
-            ✏️
-          </button>
-          <button
-            className="btn-icon delete"
-            onClick={() => openDeleteConfirm(table)}
-            title="Xóa bàn"
-          >
-            🗑️
-          </button>
-        </div>
-      </td>
-    </tr>
-  )
-
-  // ────────────────────────────────────────────────────────────────
-  // JSX
-  // ────────────────────────────────────────────────────────────────
   return (
     <AdminLayout
-      title="Quản lý bàn"
-      subtitle="Nhà hàng"
+      title="Quản lý bàn ăn"
+      subtitle="Sơ đồ bố trí chỗ ngồi & quản trị trạng thái phục vụ"
       actions={
-        <button className="add-table-btn" onClick={openAddForm} id="btn-add-table">
-          <span>＋</span>
-          <span>Thêm bàn mới</span>
-        </button>
+        <div className="tbl-topbar-actions">
+          <a href="/staff" className="tbl-nav-link">
+            Sơ đồ sảnh phục vụ
+          </a>
+          <button className="tbl-btn-refresh" onClick={loadTables} title="Tải lại danh sách">
+            Làm mới
+          </button>
+          <button className="tbl-btn-primary" onClick={openAddForm}>
+            + Thêm bàn mới
+          </button>
+        </div>
       }
     >
-      <div className="tables-page">
-
-        {/* ── Stats bar ─────────────────────────────────────────── */}
-        <div className="tables-stats-bar">
-          <div className="tstat-card">
-            <div className="tstat-icon all">🪑</div>
-            <div className="tstat-info">
-              <span className="tstat-label">Tổng số bàn</span>
-              <span className="tstat-value">{stats.all}</span>
-            </div>
-          </div>
-          <div className="tstat-card">
-            <div className="tstat-icon avail">✅</div>
-            <div className="tstat-info">
-              <span className="tstat-label">Bàn trống</span>
-              <span className="tstat-value">{stats.available}</span>
-            </div>
-          </div>
-          <div className="tstat-card">
-            <div className="tstat-icon occupied">🍽️</div>
-            <div className="tstat-info">
-              <span className="tstat-label">Đang dùng</span>
-              <span className="tstat-value">{stats.occupied}</span>
-            </div>
-          </div>
-          <div className="tstat-card">
-            <div className="tstat-icon reserved">📋</div>
-            <div className="tstat-info">
-              <span className="tstat-label">Đặt trước</span>
-              <span className="tstat-value">{stats.reserved}</span>
-            </div>
-          </div>
-          <div className="tstat-card">
-            <div className="tstat-icon maint">🔧</div>
-            <div className="tstat-info">
-              <span className="tstat-label">Bảo trì</span>
-              <span className="tstat-value">{stats.maintenance}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Toolbar ───────────────────────────────────────────── */}
-        <div className="tables-toolbar">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
-            <input
-              id="table-search"
-              type="text"
-              placeholder="Tìm bàn theo số bàn hoặc trạng thái..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <select
-            id="table-filter-status"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+      <div className="tables-admin-page">
+        {/* ── 1. METRIC CARDS ────────────────────────────────────── */}
+        <div className="tbl-metrics-grid">
+          <div
+            className={`tbl-metric-card${filterStatus === 'ALL' ? ' active' : ''}`}
+            onClick={() => setFilterStatus('ALL')}
           >
-            <option value="ALL">Tất cả trạng thái</option>
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.icon} {opt.label}
-              </option>
-            ))}
-          </select>
+            <div className="tbl-metric-head">
+              <span className="tbl-metric-label">Tổng số bàn</span>
+              <span className="tbl-metric-pill neutral">Tất cả</span>
+            </div>
+            <div className="tbl-metric-val">{stats.all}</div>
+            <div className="tbl-metric-sub">Toàn bộ bàn trong hệ thống</div>
+          </div>
 
-          <div className="view-toggle">
-            <button
-              id="view-grid-btn"
-              className={viewMode === 'grid' ? 'active' : ''}
-              onClick={() => setViewMode('grid')}
-            >
-              ▦ Lưới
-            </button>
-            <button
-              id="view-list-btn"
-              className={viewMode === 'list' ? 'active' : ''}
-              onClick={() => setViewMode('list')}
-            >
-              ☰ Danh sách
-            </button>
+          <div
+            className={`tbl-metric-card${filterStatus === 'AVAILABLE' ? ' active' : ''}`}
+            onClick={() => setFilterStatus(filterStatus === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')}
+          >
+            <div className="tbl-metric-head">
+              <span className="tbl-metric-label">Bàn đang trống</span>
+              <span className="tbl-metric-pill success">Sẵn sàng</span>
+            </div>
+            <div className="tbl-metric-val text-emerald">{stats.available}</div>
+            <div className="tbl-metric-sub">Sẵn sàng đón tiếp khách mới</div>
+          </div>
+
+          <div
+            className={`tbl-metric-card${filterStatus === 'OCCUPIED' ? ' active' : ''}`}
+            onClick={() => setFilterStatus(filterStatus === 'OCCUPIED' ? 'ALL' : 'OCCUPIED')}
+          >
+            <div className="tbl-metric-head">
+              <span className="tbl-metric-label">Đang có khách</span>
+              <span className="tbl-metric-pill info">Đang dùng</span>
+            </div>
+            <div className="tbl-metric-val text-blue">{stats.occupied}</div>
+            <div className="tbl-metric-sub">Đang phục vụ ẩm thực tại bàn</div>
+          </div>
+
+          <div
+            className={`tbl-metric-card${filterStatus === 'RESERVED' ? ' active' : ''}`}
+            onClick={() => setFilterStatus(filterStatus === 'RESERVED' ? 'ALL' : 'RESERVED')}
+          >
+            <div className="tbl-metric-head">
+              <span className="tbl-metric-label">Đã đặt trước</span>
+              <span className="tbl-metric-pill warning">Giữ chỗ</span>
+            </div>
+            <div className="tbl-metric-val text-amber">{stats.reserved}</div>
+            <div className="tbl-metric-sub">Đã xác nhận đặt chỗ hẹn giờ</div>
+          </div>
+
+          <div
+            className={`tbl-metric-card${filterStatus === 'MAINTENANCE' ? ' active' : ''}`}
+            onClick={() => setFilterStatus(filterStatus === 'MAINTENANCE' ? 'ALL' : 'MAINTENANCE')}
+          >
+            <div className="tbl-metric-head">
+              <span className="tbl-metric-label">Bảo trì / Tạm ngưng</span>
+              <span className="tbl-metric-pill dark">Bảo trì</span>
+            </div>
+            <div className="tbl-metric-val text-slate">{stats.maintenance}</div>
+            <div className="tbl-metric-sub">Đang sửa chữa hoặc dọn dẹp</div>
           </div>
         </div>
 
-        {/* ── Content ───────────────────────────────────────────── */}
+        {/* ── 2. TOOLBAR & STATUS TABS ───────────────────────────── */}
+        <div className="tbl-control-panel">
+          {/* Status Tabs */}
+          <div className="tbl-status-tabs">
+            {STATUS_OPTIONS.map(opt => {
+              const count = opt.value === 'ALL'
+                ? stats.all
+                : tables.filter(t => t.status === opt.value).length
+              const isActive = filterStatus === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`tbl-tab-btn${isActive ? ' active' : ''}`}
+                  onClick={() => setFilterStatus(opt.value)}
+                >
+                  <span>{opt.label}</span>
+                  <span className="tbl-tab-count">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Search & View Toggle */}
+          <div className="tbl-filter-row">
+            <div className="tbl-search-box">
+              <input
+                type="text"
+                placeholder="Tìm kiếm số bàn (vd: 1, 10) hoặc trạng thái..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="tbl-search-clear"
+                  onClick={() => setSearch('')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="tbl-view-toggle">
+              <button
+                type="button"
+                className={`tbl-view-btn${viewMode === 'grid' ? ' active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Xem dạng thẻ sơ đồ"
+              >
+                Sơ đồ thẻ
+              </button>
+              <button
+                type="button"
+                className={`tbl-view-btn${viewMode === 'table' ? ' active' : ''}`}
+                onClick={() => setViewMode('table')}
+                title="Xem dạng danh sách bảng"
+              >
+                Bảng
+              </button>
+            </div>
+
+            {(search || filterStatus !== 'ALL') && (
+              <button
+                type="button"
+                className="tbl-btn-reset"
+                onClick={() => { setSearch(''); setFilterStatus('ALL') }}
+              >
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── 3. DATA VIEW: GRID OR TABLE ────────────────────────── */}
         {loading ? (
-          <div className="tables-loading">
-            <div className="spinner" />
-            <span>Đang tải dữ liệu...</span>
+          <div className="tbl-state-box">
+            <div className="tbl-spinner" />
+            <div className="tbl-state-title">Đang tải danh sách bàn ăn...</div>
           </div>
         ) : filteredTables.length === 0 ? (
-          <div className="tables-empty">
-            <div className="empty-icon">🪑</div>
-            <p>
-              {tables.length === 0
-                ? 'Chưa có bàn nào. Hãy thêm bàn đầu tiên!'
-                : 'Không tìm thấy bàn phù hợp.'}
-            </p>
+          <div className="tbl-state-box">
+            <div className="tbl-state-title">Không tìm thấy bàn nào</div>
+            <div className="tbl-state-desc">
+              {search || filterStatus !== 'ALL'
+                ? 'Không có bàn nào phù hợp với điều kiện tìm kiếm hiện tại.'
+                : 'Chưa có bàn nào được cấu hình trong hệ thống.'}
+            </div>
+            <button type="button" className="tbl-btn-primary" onClick={openAddForm}>
+              + Tạo bàn mới ngay
+            </button>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="tables-grid">
-            {filteredTables.map(renderGridCard)}
+
+          /* ── GRID VIEW (Sơ đồ thẻ bàn ăn) ─────────────────────── */
+          <div className="tbl-cards-grid">
+            {filteredTables.map(table => {
+              const st = STATUS_MAP[table.status] || STATUS_MAP.AVAILABLE
+              return (
+                <div key={table.id} className={`tbl-table-card ${st.cls}`}>
+                  <div className="tbl-card-head">
+                    <div className="tbl-card-number">Bàn {table.tableNumber}</div>
+                    <span className={`tbl-status-badge ${st.cls}`}>
+                      {st.label}
+                    </span>
+                  </div>
+
+                  <div className="tbl-card-body">
+                    <div className="tbl-card-capacity">
+                      <span className="tbl-cap-val">{table.capacity}</span>
+                      <span className="tbl-cap-lbl">chỗ ngồi</span>
+                    </div>
+                    <div className="tbl-quick-change">
+                      <select
+                        value={table.status}
+                        onChange={e => handleQuickStatus(table.id, e.target.value, table.tableNumber)}
+                        title="Đổi nhanh trạng thái"
+                      >
+                        <option value="AVAILABLE">Trống</option>
+                        <option value="OCCUPIED">Đang dùng</option>
+                        <option value="RESERVED">Đặt trước</option>
+                        <option value="MAINTENANCE">Bảo trì</option>
+                        <option value="INACTIVE">Ngừng dùng</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="tbl-card-foot">
+                    <button
+                      type="button"
+                      className="tbl-act-btn edit"
+                      onClick={() => openEditForm(table)}
+                    >
+                      Chỉnh sửa
+                    </button>
+                    <button
+                      type="button"
+                      className="tbl-act-btn delete"
+                      onClick={() => openDeleteConfirm(table)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
+
         ) : (
-          <div className="tables-list-card">
-            <table className="tables-table">
+
+          /* ── TABLE VIEW (Danh sách dạng bảng) ─────────────────── */
+          <div className="tbl-table-wrap">
+            <table className="tbl-data-table">
               <thead>
                 <tr>
-                  <th>Số bàn</th>
-                  <th>Sức chứa</th>
+                  <th style={{ width: '120px' }}>Số bàn</th>
+                  <th style={{ width: '140px' }}>Sức chứa</th>
                   <th>Trạng thái</th>
-                  <th>Đổi nhanh</th>
-                  <th>Thao tác</th>
+                  <th style={{ width: '180px' }}>Chuyển trạng thái nhanh</th>
+                  <th style={{ width: '140px', textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTables.map(renderListRow)}
+                {filteredTables.map(table => {
+                  const st = STATUS_MAP[table.status] || STATUS_MAP.AVAILABLE
+                  return (
+                    <tr key={table.id}>
+                      <td>
+                        <span className="tbl-num-tag">Bàn {table.tableNumber}</span>
+                      </td>
+                      <td>
+                        <span className="tbl-cap-text">{table.capacity} khách</span>
+                      </td>
+                      <td>
+                        <span className={`tbl-status-badge ${st.cls}`}>
+                          {st.label}
+                        </span>
+                      </td>
+                      <td>
+                        <select
+                          className="tbl-quick-select"
+                          value={table.status}
+                          onChange={e => handleQuickStatus(table.id, e.target.value, table.tableNumber)}
+                        >
+                          <option value="AVAILABLE">Trống</option>
+                          <option value="OCCUPIED">Đang dùng</option>
+                          <option value="RESERVED">Đặt trước</option>
+                          <option value="MAINTENANCE">Bảo trì</option>
+                          <option value="INACTIVE">Ngừng dùng</option>
+                        </select>
+                      </td>
+                      <td>
+                        <div className="tbl-actions-cell">
+                          <button
+                            type="button"
+                            className="tbl-act-btn edit"
+                            onClick={() => openEditForm(table)}
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            className="tbl-act-btn delete"
+                            onClick={() => openDeleteConfirm(table)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
-      </div>
 
-      {/* ── Add / Edit Modal ─────────────────────────────────────── */}
-      {showForm && (
-        <div className="modal-overlay" onClick={closeForm}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editTarget ? `Chỉnh sửa Bàn ${editTarget.tableNumber}` : 'Thêm bàn mới'}</h2>
-              <button className="modal-close" onClick={closeForm} aria-label="Đóng">✕</button>
+        {/* ── 4. MODAL: THÊM / SỬA BÀN ───────────────────────────── */}
+        {showForm && (
+          <div className="tbl-modal-overlay" onClick={closeForm}>
+            <div className="tbl-modal-dialog" onClick={e => e.stopPropagation()}>
+              <div className="tbl-modal-header">
+                <h2>{editTarget ? `Chỉnh sửa Bàn ${editTarget.tableNumber}` : 'Thêm bàn mới'}</h2>
+                <button type="button" className="tbl-modal-close" onClick={closeForm}>✕</button>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                <div className="tbl-modal-body">
+                  <div className="tbl-form-group">
+                    <label>Số bàn <span className="req">*</span></label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Ví dụ: 1, 2, 12..."
+                      value={formData.tableNumber}
+                      onChange={e => setFormData({ ...formData, tableNumber: e.target.value })}
+                      autoFocus
+                    />
+                    {formErrors.tableNumber && (
+                      <span className="tbl-form-err">{formErrors.tableNumber}</span>
+                    )}
+                  </div>
+
+                  <div className="tbl-form-group">
+                    <label>Sức chứa (số khách tối đa) <span className="req">*</span></label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      placeholder="Ví dụ: 4, 6, 10..."
+                      value={formData.capacity}
+                      onChange={e => setFormData({ ...formData, capacity: e.target.value })}
+                    />
+                    {formErrors.capacity && (
+                      <span className="tbl-form-err">{formErrors.capacity}</span>
+                    )}
+                  </div>
+
+                  <div className="tbl-form-group">
+                    <label>Trạng thái khởi tạo</label>
+                    <select
+                      value={formData.status}
+                      onChange={e => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="AVAILABLE">Bàn trống (Sẵn sàng phục vụ)</option>
+                      <option value="OCCUPIED">Đang có khách dùng</option>
+                      <option value="RESERVED">Đã đặt trước</option>
+                      <option value="MAINTENANCE">Bảo trì / Vệ sinh</option>
+                      <option value="INACTIVE">Tạm ngưng phục vụ</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="tbl-modal-footer">
+                  <button
+                    type="button"
+                    className="tbl-btn-secondary"
+                    onClick={closeForm}
+                    disabled={submitting}
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    className="tbl-btn-primary"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Đang lưu...' : editTarget ? 'Cập nhật bàn' : 'Tạo bàn'}
+                  </button>
+                </div>
+              </form>
             </div>
+          </div>
+        )}
 
-            <form className="modal-form" onSubmit={handleSubmit} noValidate>
-              {/* Số bàn */}
-              <div className="form-field">
-                <label htmlFor="field-table-number">Số bàn <span style={{ color: '#ef5350' }}>*</span></label>
-                <input
-                  id="field-table-number"
-                  type="number"
-                  min="1"
-                  placeholder="Nhập số bàn (VD: 1, 2, 3...)"
-                  value={formData.tableNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tableNumber: e.target.value }))}
-                />
-                {formErrors.tableNumber && (
-                  <span className="field-error">{formErrors.tableNumber}</span>
-                )}
-              </div>
-
-              {/* Sức chứa */}
-              <div className="form-field">
-                <label htmlFor="field-capacity">Sức chứa (người) <span style={{ color: '#ef5350' }}>*</span></label>
-                <input
-                  id="field-capacity"
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="Số người tối đa (VD: 4, 6, 8...)"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
-                />
-                {formErrors.capacity && (
-                  <span className="field-error">{formErrors.capacity}</span>
-                )}
-              </div>
-
-              {/* Trạng thái */}
-              <div className="form-field">
-                <label htmlFor="field-status">Trạng thái</label>
-                <select
-                  id="field-status"
-                  value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+        {/* ── 5. MODAL: XÁC NHẬN XÓA BÀN ─────────────────────────── */}
+        {deleteTarget && (
+          <div className="tbl-modal-overlay" onClick={closeDeleteConfirm}>
+            <div className="tbl-dialog-confirm" onClick={e => e.stopPropagation()}>
+              <div className="tbl-dialog-warning-icon">!</div>
+              <h3>Xác nhận xóa Bàn {deleteTarget.tableNumber}?</h3>
+              <p>
+                Bàn này cùng lịch sử liên quan sẽ bị xóa khỏi hệ thống.
+                Hành động này không thể hoàn tác.
+              </p>
+              <div className="tbl-dialog-actions">
+                <button
+                  type="button"
+                  className="tbl-btn-secondary"
+                  onClick={closeDeleteConfirm}
+                  disabled={deleting}
                 >
-                  {STATUS_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.icon} {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {formErrors.status && (
-                  <span className="field-error">{formErrors.status}</span>
-                )}
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={closeForm}>
-                  Huỷ
+                  Hủy
                 </button>
-                <button type="submit" className="btn-submit" disabled={submitting} id="btn-submit-table">
-                  {submitting
-                    ? 'Đang lưu...'
-                    : editTarget ? 'Cập nhật' : 'Thêm bàn'}
+                <button
+                  type="button"
+                  className="tbl-btn-danger"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Đang xóa...' : 'Xác nhận xóa'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Delete Confirm Modal ─────────────────────────────────── */}
-      {deleteTarget && (
-        <div className="modal-overlay" onClick={closeDeleteConfirm}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon">⚠️</div>
-            <h3>Xác nhận xóa bàn</h3>
-            <p>
-              Bạn có chắc muốn xóa <strong>Bàn số {deleteTarget.tableNumber}</strong>?<br />
-              Bàn sẽ được đặt thành "Ngừng dùng" (có thể khôi phục).
-            </p>
-            <div className="confirm-btns">
-              <button className="btn-cancel" onClick={closeDeleteConfirm}>
-                Huỷ
-              </button>
-              <button
-                className="btn-danger-confirm"
-                onClick={confirmDelete}
-                disabled={deleting}
-                id="btn-confirm-delete"
-              >
-                {deleting ? 'Đang xóa...' : 'Xóa bàn'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Toast ─────────────────────────────────────────────────── */}
-      {toast && (
-        <div className={`toast-message ${toast.type}`}>
-          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
-        </div>
-      )}
+        {/* ── 6. TOAST NOTIFICATIONS ─────────────────────────────── */}
+        {toast && (
+          <div className={`tbl-toast-item ${toast.type}`}>
+            <span className="tbl-toast-dot" />
+            <span className="tbl-toast-msg">{toast.message}</span>
+          </div>
+        )}
+      </div>
     </AdminLayout>
   )
 }
-
-export default TablesPage

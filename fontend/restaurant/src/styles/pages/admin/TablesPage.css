@@ -1,0 +1,855 @@
+/* ================================================================
+   TABLES ADMIN PAGE — Modern Restaurant Floor & Tables Redesign
+   High-contrast, uncluttered, professional, no redundant side-borders
+   ================================================================ */
+
+.tables-admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
+}
+
+/* ── Topbar Actions ───────────────────────────────────────────── */
+.tbl-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tbl-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tbl-nav-link:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.tbl-btn-refresh {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tbl-btn-refresh:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.tbl-btn-primary {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #0f172a;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tbl-btn-primary:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+.tbl-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── 1. Metric Cards ──────────────────────────────────────────── */
+.tbl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.tbl-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tbl-metric-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+  transform: translateY(-1px);
+}
+
+.tbl-metric-card.active {
+  border-color: #0f172a;
+  background: #fafbfc;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.tbl-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tbl-metric-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.tbl-metric-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+}
+
+.tbl-metric-pill.neutral { background: #f1f5f9; color: #475569; }
+.tbl-metric-pill.success { background: #ecfdf5; color: #047857; }
+.tbl-metric-pill.info    { background: #eff6ff; color: #1e40af; }
+.tbl-metric-pill.warning { background: #fef3c7; color: #b45309; }
+.tbl-metric-pill.dark    { background: #f1f5f9; color: #64748b; }
+
+.tbl-metric-val {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tbl-metric-val.text-emerald { color: #047857; }
+.tbl-metric-val.text-blue    { color: #1d4ed8; }
+.tbl-metric-val.text-amber   { color: #b45309; }
+.tbl-metric-val.text-slate   { color: #64748b; }
+
+.tbl-metric-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 2. Control Panel & Tabs ──────────────────────────────────── */
+.tbl-control-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tbl-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tbl-tab-btn {
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tbl-tab-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.tbl-tab-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.tbl-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.tbl-tab-btn.active .tbl-tab-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Filter Row */
+.tbl-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
+
+.tbl-search-box {
+  flex: 1;
+  min-width: 240px;
+  position: relative;
+}
+
+.tbl-search-box input {
+  width: 100%;
+  padding: 7px 28px 7px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.tbl-search-box input:focus {
+  border-color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.06);
+}
+
+.tbl-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.tbl-view-toggle {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 6px;
+  gap: 2px;
+}
+
+.tbl-view-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.tbl-view-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.tbl-btn-reset {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+  background: #ffffff;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.tbl-btn-reset:hover {
+  background: #fee2e2;
+}
+
+/* ── 3. Grid View (Sơ đồ thẻ bàn ăn) ──────────────────────────── */
+.tbl-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.tbl-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.tbl-table-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.tbl-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tbl-card-number {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tbl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.st-available   { background: #ecfdf5; color: #047857; }
+.st-occupied    { background: #eff6ff; color: #1e40af; }
+.st-reserved    { background: #fef3c7; color: #92400e; }
+.st-maintenance { background: #f1f5f9; color: #475569; }
+.st-inactive    { background: #f3f4f6; color: #6b7280; }
+
+.tbl-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.tbl-card-capacity {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.tbl-cap-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.tbl-cap-lbl {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.tbl-quick-change select {
+  padding: 3px 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 0.72rem;
+  color: #0f172a;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.tbl-card-foot {
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
+
+.tbl-act-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  color: #475569;
+}
+
+.tbl-act-btn.edit:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.tbl-act-btn.delete {
+  color: #991b1b;
+  border-color: #fee2e2;
+}
+
+.tbl-act-btn.delete:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* ── 4. Table View ────────────────────────────────────────────── */
+.tbl-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tbl-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.tbl-data-table thead {
+  background: #f8fafc;
+}
+
+.tbl-data-table th {
+  padding: 10px 14px;
+  text-align: left;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.tbl-data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.tbl-data-table tr:hover td {
+  background: #fafbfc;
+}
+
+.tbl-data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.tbl-num-tag {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tbl-cap-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.tbl-quick-select {
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 0.76rem;
+  font-family: inherit;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  cursor: pointer;
+}
+
+.tbl-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+/* ── 5. State Box (Loading / Empty) ───────────────────────────── */
+.tbl-state-box {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 56px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tbl-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e2e8f0;
+  border-top-color: #0f172a;
+  border-radius: 50%;
+  animation: tbl-spin 0.6s linear infinite;
+  margin-bottom: 6px;
+}
+
+@keyframes tbl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tbl-state-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tbl-state-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  max-width: 400px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+/* ── 6. Modals & Overlay ──────────────────────────────────────── */
+.tbl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: tbl-fade 0.18s ease;
+}
+
+@keyframes tbl-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tbl-modal-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  animation: tbl-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tbl-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tbl-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tbl-modal-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.tbl-modal-close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.tbl-modal-close:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.tbl-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tbl-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tbl-form-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.req { color: #dc2626; }
+
+.tbl-form-group input,
+.tbl-form-group select {
+  padding: 8px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.tbl-form-group input:focus,
+.tbl-form-group select:focus {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+
+.tbl-form-err {
+  font-size: 0.72rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.tbl-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.tbl-btn-secondary {
+  padding: 6px 14px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.tbl-btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* ── 7. Confirm Dialog ────────────────────────────────────────── */
+.tbl-dialog-confirm {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+  text-align: center;
+  animation: tbl-up 0.18s ease;
+}
+
+.tbl-dialog-warning-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.tbl-dialog-confirm h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.tbl-dialog-confirm p {
+  margin: 0 0 18px;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.tbl-dialog-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tbl-btn-danger {
+  flex: 1;
+  padding: 7px 12px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.tbl-btn-danger:hover {
+  opacity: 0.9;
+}
+
+.tbl-dialog-confirm .tbl-btn-secondary {
+  flex: 1;
+}
+
+/* ── 8. Toast Notifications ───────────────────────────────────── */
+.tbl-toast-item {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 2000;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  animation: tbl-toast-in 0.25s ease;
+  max-width: 320px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes tbl-toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.tbl-toast-item.success {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.tbl-toast-item.error {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.tbl-toast-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+}
+
+.tbl-toast-item.error .tbl-toast-dot {
+  background: #fca5a5;
+}
+
+/* ── 9. Responsive ────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .tbl-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .tbl-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .tbl-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .tbl-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tbl-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

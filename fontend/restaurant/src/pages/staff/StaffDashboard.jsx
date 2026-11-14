@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import './StaffDashboard.css'
+import '../../styles/pages/staff/StaffDashboard.css'
 import {
   getAllTables,
   updateTableStatus,
@@ -24,67 +24,33 @@ function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0)
 }
 
-// ── KHU VỰC NHÀ HÀNG (ZONES / FLOORS) ──────────────────────────────
-export const TABLE_AREAS = [
-  { id: 'ALL', name: 'Tất cả khu vực', shortName: 'Tất cả', icon: '🌟' },
-  { id: 'FLOOR_1', name: 'Tầng 1 (Sảnh chính)', shortName: 'Tầng 1', icon: '🏛️' },
-  { id: 'FLOOR_2', name: 'Tầng 2 (Sân vườn)', shortName: 'Tầng 2', icon: '🌿' },
-  { id: 'ROOFTOP', name: 'Sân thượng (Sky View)', shortName: 'Sân thượng', icon: '🌅' },
-  { id: 'VIP', name: 'Phòng VIP Hoàng gia', shortName: 'Phòng VIP', icon: '👑' },
-]
+// ── TƯƠNG THÍCH KHU VỰC (Đã lược bỏ tầng theo yêu cầu) ────────────
+export const TABLE_AREAS = []
+export function getTableArea() { return '' }
+export function getAreaInfo() { return { id: '', name: '', shortName: '' } }
 
-export function getTableArea(table) {
-  if (table.area) return table.area
-  const num = Number(table.tableNumber)
-  if (num >= 100 && num < 200) return 'FLOOR_1'
-  if (num >= 200 && num < 300) return 'FLOOR_2'
-  if (num >= 300 && num < 400) return 'ROOFTOP'
-  if (num >= 400 || num >= 800) return 'VIP'
-
-  // Quy ước số bàn 1..30 thông dụng
-  if (num <= 8) return 'FLOOR_1'
-  if (num <= 16) return 'FLOOR_2'
-  if (num <= 24) return 'ROOFTOP'
-  return 'VIP'
-}
-
-export function getAreaInfo(areaId) {
-  return TABLE_AREAS.find(a => a.id === areaId) || TABLE_AREAS[0]
-}
-
-// ── 4 TRẠNG THÁI MÀU SẮC TRỰC QUAN ────────────────────────────────
+// ── 3 TRẠNG THÁI BÀN — TONE HOA SEN (LOTUS THEME) ────────────────
 export const STATUS_CONFIG = {
   AVAILABLE: {
     key: 'AVAILABLE',
     label: 'Trống',
-    icon: '🟢',
     badgeClass: 'status-available',
     desc: 'Sẵn sàng đón khách',
-    color: '#22c55e',
+    color: '#16a34a',
   },
   OCCUPIED: {
     key: 'OCCUPIED',
     label: 'Đang phục vụ',
-    icon: '🔴',
     badgeClass: 'status-occupied',
     desc: 'Đang có khách ngồi',
-    color: '#ef4444',
+    color: '#d86888',
   },
   RESERVED: {
     key: 'RESERVED',
     label: 'Đã đặt trước',
-    icon: '🟡',
     badgeClass: 'status-reserved',
     desc: 'Bàn đã giữ chỗ',
-    color: '#f59e0b',
-  },
-  BILLING_REQUESTED: {
-    key: 'BILLING_REQUESTED',
-    label: 'Yêu cầu thanh toán',
-    icon: '🟣',
-    badgeClass: 'status-billing',
-    desc: 'Khách gọi tính tiền',
-    color: '#a855f7',
+    color: '#d97706',
   },
 }
 
@@ -110,8 +76,7 @@ function StaffDashboard() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // ── Floor Plan & Lọc Bàn ──────────────────────────────────────────
-  const [selectedArea, setSelectedArea] = useState('ALL')
+  // ── Lọc Bàn & Chế độ xem ─────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [searchTable, setSearchTable] = useState('')
   const [floorViewMode, setFloorViewMode] = useState('floorplan') // 'floorplan' | 'cards'
@@ -130,23 +95,12 @@ function StaffDashboard() {
   const [submittingOrder, setSubmittingOrder] = useState(false)
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false) // Mobile cart drawer
 
-  // Danh sách bàn đang yêu cầu thanh toán (Hỗ trợ fallback khi server chưa restart)
-  const [billingTableIds, setBillingTableIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pos_billing_table_ids')
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  })
-
+  // Dọn dẹp cache lưu trạng thái chờ thanh toán cũ
   useEffect(() => {
     try {
-      localStorage.setItem('pos_billing_table_ids', JSON.stringify(billingTableIds))
-    } catch (e) {
-      console.warn('Lỗi lưu localStorage:', e)
-    }
-  }, [billingTableIds])
+      localStorage.removeItem('pos_billing_table_ids')
+    } catch {}
+  }, [])
 
   // Toast
   const [toast, setToast] = useState(null)
@@ -167,18 +121,27 @@ function StaffDashboard() {
         getAllCategories().catch(() => []),
       ])
 
-      setTables(tablesData || [])
-      setOrders(ordersData || [])
+      if (typeof setTables === 'function') setTables(tablesData || [])
+      if (typeof setOrders === 'function') setOrders(ordersData || [])
+
+      // Tự động giải phóng bàn nếu trong database từng bị kẹt ở BILLING_REQUESTED cũ
+      if (Array.isArray(tablesData)) {
+        tablesData.forEach(t => {
+          if (t && t.status === 'BILLING_REQUESTED') {
+            updateTableStatus(t.id, 'AVAILABLE').catch(() => {})
+          }
+        })
+      }
 
       // CHỈ HIỂN THỊ MÓN ĐANG HOẠT ĐỘNG (status === 'ACTIVE')
-      const activeItems = (itemsData || []).filter(item => item.status === 'ACTIVE')
-      setMenuItems(activeItems)
+      const activeItems = (itemsData || []).filter(item => item && item.status === 'ACTIVE')
+      if (typeof setMenuItems === 'function') setMenuItems(activeItems)
 
       // Lọc combo nếu có
-      const activeCombos = (combosData || []).filter(c => !c.status || c.status === 'ACTIVE')
-      setCombos(activeCombos)
+      const activeCombos = (combosData || []).filter(c => c && (!c.status || c.status === 'ACTIVE'))
+      if (typeof setCombos === 'function') setCombos(activeCombos)
 
-      setCategories(catsData || [])
+      if (typeof setCategories === 'function') setCategories(catsData || [])
     } catch (err) {
       console.error('Staff fetch error', err)
       showToast('Lỗi tải dữ liệu: ' + (err.message || ''))
@@ -239,14 +202,6 @@ function StaffDashboard() {
       o => o.tableId === table.id && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
     )
 
-    if (
-      table.status === 'BILLING_REQUESTED' ||
-      currentOrder?.status === 'BILLING_REQUESTED' ||
-      billingTableIds.includes(table.id) ||
-      (currentOrder?.note && currentOrder.note.includes('[YÊU CẦU THANH TOÁN]'))
-    ) {
-      return 'BILLING_REQUESTED'
-    }
     if (table.status === 'OCCUPIED' || currentOrder) {
       return 'OCCUPIED'
     }
@@ -254,17 +209,13 @@ function StaffDashboard() {
       return 'RESERVED'
     }
     return 'AVAILABLE'
-  }, [orders, billingTableIds])
+  }, [orders])
 
-  // ── Bàn lọc theo Khu vực & Trạng thái & Tìm kiếm ──────────────────
+  // ── Bàn lọc theo Trạng thái & Tìm kiếm (Đã bỏ lọc tầng) ───────────
   const filteredTables = useMemo(() => {
     return tables.filter(t => {
       // Bỏ qua bàn ngừng hoạt động
       if (t.status === 'INACTIVE') return false
-
-      // Lọc theo Khu vực
-      const area = getTableArea(t)
-      if (selectedArea !== 'ALL' && area !== selectedArea) return false
 
       // Lọc theo Trạng thái
       const effStatus = getTableEffectiveStatus(t)
@@ -279,7 +230,7 @@ function StaffDashboard() {
 
       return true
     })
-  }, [tables, selectedArea, statusFilter, searchTable, getTableEffectiveStatus])
+  }, [tables, statusFilter, searchTable, getTableEffectiveStatus])
 
   // ── Thống kê tổng số lượng bàn theo trạng thái ────────────────────
   const statusCounts = useMemo(() => {
@@ -288,7 +239,6 @@ function StaffDashboard() {
       AVAILABLE: 0,
       OCCUPIED: 0,
       RESERVED: 0,
-      BILLING_REQUESTED: 0,
     }
 
     tables.forEach(t => {
@@ -319,8 +269,8 @@ function StaffDashboard() {
       setOrderNote('')
       setViewMode('ordering')
       setCartDrawerOpen(false)
-    } else if (effStatus === 'OCCUPIED' || effStatus === 'BILLING_REQUESTED') {
-      // Bàn đang phục vụ hoặc đang đòi tính tiền -> Mở modal chi tiết
+    } else if (effStatus === 'OCCUPIED') {
+      // Bàn đang phục vụ -> Mở modal chi tiết
       setActiveTableOrder(currentOrder || null)
       setShowTableModal(true)
     } else if (effStatus === 'RESERVED') {
@@ -346,38 +296,6 @@ function StaffDashboard() {
     setCartDrawerOpen(false)
   }
 
-  // ── Yêu cầu thanh toán (Đổi sang màu tím 🟣) ──────────────────────
-  const handleRequestBilling = async (table, currentOrder) => {
-    try {
-      // 1. Đánh dấu ngay lập tức trên UI sang màu tím 🟣
-      setBillingTableIds(prev => (prev.includes(table.id) ? prev : [...prev, table.id]))
-
-      // 2. Thử gọi API backend cập nhật trạng thái
-      try {
-        if (currentOrder) {
-          await updateOrderStatus(currentOrder.id, 'BILLING_REQUESTED')
-        }
-        await updateTableStatus(table.id, 'BILLING_REQUESTED')
-      } catch (backendErr) {
-        console.warn('Backend validation notice (đang dùng fallback chờ restart Spring Boot):', backendErr)
-        // Fallback: Nếu backend chưa restart và báo "Dữ liệu không hợp lệ", lưu cờ vào ghi chú đơn hàng
-        if (currentOrder) {
-          const noteText = currentOrder.note || ''
-          const updatedNote = noteText.includes('[YÊU CẦU THANH TOÁN]')
-            ? noteText
-            : (noteText ? `${noteText} • [YÊU CẦU THANH TOÁN]` : '[YÊU CẦU THANH TOÁN]')
-          await updateOrder(currentOrder.id, { tableId: table.id, note: updatedNote }).catch(() => {})
-        }
-      }
-
-      showToast(`Đã gửi Yêu cầu thanh toán cho Bàn ${table.tableNumber}! 🟣`)
-      setShowTableModal(false)
-      fetchData()
-    } catch (err) {
-      showToast('Lỗi gửi yêu cầu thanh toán: ' + (err.message || ''))
-    }
-  }
-
   // ── Hoàn tất / Trả bàn (Thu ngân & Giải phóng) ─────────────────────
   const handleCheckoutTable = async () => {
     if (!activeTableOrder) return
@@ -386,7 +304,7 @@ function StaffDashboard() {
     try {
       await updateOrderStatus(activeTableOrder.id, 'COMPLETED')
       if (selectedTable?.id) {
-        setBillingTableIds(prev => prev.filter(id => id !== selectedTable.id))
+        await updateTableStatus(selectedTable.id, 'AVAILABLE').catch(() => {})
       }
       showToast(`Bàn ${selectedTable?.tableNumber} đã hoàn tất và thanh toán!`)
       setShowTableModal(false)
@@ -545,14 +463,14 @@ function StaffDashboard() {
 
   return (
     <div className="waiter-app-wrapper">
-      {/* ── 1. HEADER / TOPBAR (Mobile-First Compact Header) ───────── */}
+      {/* ── 1. HEADER / TOPBAR (Lotus Theme POS Navigation) ──────── */}
       <header className="waiter-topbar">
         <div className="waiter-topbar-left">
-          <div className="waiter-brand-logo">🍽️</div>
+          <div className="waiter-brand-logo">🪷</div>
           <div>
-            <h1 className="waiter-app-title">Phục Vụ (POS)</h1>
+            <h1 className="waiter-app-title">Phục Vụ POS</h1>
             <p className="waiter-app-subtitle">
-              {viewMode === 'tables' ? 'Sơ đồ bàn & Trạng thái' : `Đang gọi món Bàn ${selectedTable?.tableNumber}`}
+              {viewMode === 'tables' ? 'Sơ đồ bàn & Trạng thái' : `Gọi món • Bàn ${selectedTable?.tableNumber}`}
             </p>
           </div>
         </div>
@@ -567,7 +485,7 @@ function StaffDashboard() {
               setCartDrawerOpen(false)
             }}
           >
-            🪑 Sơ đồ bàn
+            Sơ đồ bàn
           </button>
           {selectedTable && (
             <button
@@ -575,7 +493,7 @@ function StaffDashboard() {
               className={`waiter-tab-btn ${viewMode === 'ordering' ? 'active' : ''}`}
               onClick={() => setViewMode('ordering')}
             >
-              📝 Bàn {selectedTable.tableNumber} {cartTotalQty > 0 ? `(${cartTotalQty})` : ''}
+              Bàn {selectedTable.tableNumber} {cartTotalQty > 0 ? `(${cartTotalQty})` : ''}
             </button>
           )}
         </div>
@@ -588,14 +506,51 @@ function StaffDashboard() {
             onClick={fetchData}
             title="Làm mới dữ liệu"
           >
-            🔄
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
           </button>
-          <a href="/staff/reservations" className="waiter-link-btn res-btn" title="Quản lý đặt bàn">
-            📅 Đặt bàn
+          <a href="/staff/reservations" className="waiter-link-btn" title="Quản lý đặt bàn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span>Đặt bàn</span>
           </a>
-          {canAccessKitchen && <a href="/kitchen" className="waiter-link-btn" title="Bếp KDS">🍳 Bếp</a>}
-          {canAccessCashier && <a href="/cashier" className="waiter-link-btn" title="Thu ngân">💰 Thu ngân</a>}
-          {canAccessAdmin   && <a href="/admin/orders" className="waiter-link-btn admin-btn">📊 Admin</a>}
+          {canAccessKitchen && (
+            <a href="/kitchen" className="waiter-link-btn" title="Bếp KDS">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                <line x1="6" y1="1" x2="6" y2="4" />
+                <line x1="10" y1="1" x2="10" y2="4" />
+                <line x1="14" y1="1" x2="14" y2="4" />
+              </svg>
+              <span>Bếp</span>
+            </a>
+          )}
+          {canAccessCashier && (
+            <a href="/cashier" className="waiter-link-btn" title="Thu ngân">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
+              <span>Thu ngân</span>
+            </a>
+          )}
+          {canAccessAdmin && (
+            <a href="/admin/orders" className="waiter-link-btn admin-btn" title="Trang quản trị">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span>Admin</span>
+            </a>
+          )}
         </div>
       </header>
 
@@ -603,36 +558,61 @@ function StaffDashboard() {
       <main className="waiter-main-content">
         {viewMode === 'tables' ? (
           /* ══════════════════════════════════════════════════════════════
-             VIEW 1: SƠ ĐỒ BÀN TƯƠNG TÁC (VISUAL FLOOR PLAN)
+             VIEW 1: SƠ ĐỒ BÀN TƯƠNG TÁC (LOTUS THEME FLOOR PLAN)
              ══════════════════════════════════════════════════════════════ */
           <div className="floorplan-container">
-            {/* ── KHU VỰC TABS (Tầng 1, Tầng 2, Sân thượng, Phòng VIP) ── */}
-            <div className="floorplan-area-bar">
-              <div className="area-tabs-scroll">
-                {TABLE_AREAS.map(area => {
-                  const areaCount = area.id === 'ALL'
-                    ? tables.filter(t => t.status !== 'INACTIVE').length
-                    : tables.filter(t => t.status !== 'INACTIVE' && getTableArea(t) === area.id).length
+            {/* ── THANH CÔNG CỤ ĐIỀU KHIỂN & LỌC TRẠNG THÁI (ĐÃ BỎ TẦNG) ── */}
+            <div className="pos-unified-toolbar">
+              <div className="pos-status-bar">
+                <button
+                  type="button"
+                  className={`status-pill all ${statusFilter === 'ALL' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter('ALL')}
+                >
+                  <span>Tất cả</span>
+                  <span className="pill-badge">{statusCounts.TOTAL}</span>
+                </button>
 
-                  return (
-                    <button
-                      key={area.id}
-                      type="button"
-                      className={`area-tab-btn ${selectedArea === area.id ? 'active' : ''}`}
-                      onClick={() => setSelectedArea(area.id)}
-                    >
-                      <span className="area-icon">{area.icon}</span>
-                      <span className="area-name">{area.shortName}</span>
-                      <span className="area-badge">{areaCount}</span>
-                    </button>
-                  )
-                })}
+                <button
+                  type="button"
+                  className={`status-pill available ${statusFilter === 'AVAILABLE' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(prev => prev === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')}
+                >
+                  <span className="dot dot-available" />
+                  <span>Trống</span>
+                  <span className="pill-badge">{statusCounts.AVAILABLE}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`status-pill occupied ${statusFilter === 'OCCUPIED' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(prev => prev === 'OCCUPIED' ? 'ALL' : 'OCCUPIED')}
+                >
+                  <span className="dot dot-occupied" />
+                  <span>Đang phục vụ</span>
+                  <span className="pill-badge">{statusCounts.OCCUPIED}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`status-pill reserved ${statusFilter === 'RESERVED' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(prev => prev === 'RESERVED' ? 'ALL' : 'RESERVED')}
+                >
+                  <span className="dot dot-reserved" />
+                  <span>Đã đặt</span>
+                  <span className="pill-badge">{statusCounts.RESERVED}</span>
+                </button>
               </div>
 
               {/* Ô tìm bàn & Chuyển chế độ hiển thị */}
-              <div className="floorplan-quick-controls">
+              <div className="pos-quick-controls">
                 <div className="table-search-box">
-                  <span className="search-icon">🔍</span>
+                  <span className="search-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
                   <input
                     type="text"
                     placeholder="Tìm số bàn..."
@@ -651,90 +631,50 @@ function StaffDashboard() {
                     type="button"
                     className={`toggle-btn ${floorViewMode === 'floorplan' ? 'active' : ''}`}
                     onClick={() => setFloorViewMode('floorplan')}
-                    title="Sơ đồ bàn trực quan"
+                    title="Chế độ sơ đồ bàn"
                   >
-                    🗺️ Sơ đồ
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                    </svg>
+                    <span>Sơ đồ</span>
                   </button>
                   <button
                     type="button"
                     className={`toggle-btn ${floorViewMode === 'cards' ? 'active' : ''}`}
                     onClick={() => setFloorViewMode('cards')}
-                    title="Lưới thẻ danh sách"
+                    title="Chế độ danh sách thẻ"
                   >
-                    🗂️ Thẻ
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <circle cx="4" cy="6" r="1" />
+                      <circle cx="4" cy="12" r="1" />
+                      <circle cx="4" cy="18" r="1" />
+                    </svg>
+                    <span>Thẻ</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* ── 4 TRẠNG THÁI MÀU SẮC TRỰC QUAN (STAT PILLS) ───────── */}
-            <div className="floorplan-status-bar">
-              <button
-                type="button"
-                className={`status-pill all ${statusFilter === 'ALL' ? 'active' : ''}`}
-                onClick={() => setStatusFilter('ALL')}
-              >
-                <span>Tất cả</span>
-                <strong>{statusCounts.TOTAL}</strong>
-              </button>
-
-              <button
-                type="button"
-                className={`status-pill available ${statusFilter === 'AVAILABLE' ? 'active' : ''}`}
-                onClick={() => setStatusFilter(prev => prev === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')}
-              >
-                <span className="dot dot-available" />
-                <span>🟢 Trống</span>
-                <strong>{statusCounts.AVAILABLE}</strong>
-              </button>
-
-              <button
-                type="button"
-                className={`status-pill occupied ${statusFilter === 'OCCUPIED' ? 'active' : ''}`}
-                onClick={() => setStatusFilter(prev => prev === 'OCCUPIED' ? 'ALL' : 'OCCUPIED')}
-              >
-                <span className="dot dot-occupied" />
-                <span>🔴 Đang phục vụ</span>
-                <strong>{statusCounts.OCCUPIED}</strong>
-              </button>
-
-              <button
-                type="button"
-                className={`status-pill reserved ${statusFilter === 'RESERVED' ? 'active' : ''}`}
-                onClick={() => setStatusFilter(prev => prev === 'RESERVED' ? 'ALL' : 'RESERVED')}
-              >
-                <span className="dot dot-reserved" />
-                <span>🟡 Đã đặt trước</span>
-                <strong>{statusCounts.RESERVED}</strong>
-              </button>
-
-              <button
-                type="button"
-                className={`status-pill billing ${statusFilter === 'BILLING_REQUESTED' ? 'active' : ''}`}
-                onClick={() => setStatusFilter(prev => prev === 'BILLING_REQUESTED' ? 'ALL' : 'BILLING_REQUESTED')}
-              >
-                <span className="dot dot-billing" />
-                <span>🟣 Yêu cầu thanh toán</span>
-                <strong>{statusCounts.BILLING_REQUESTED}</strong>
-              </button>
-            </div>
-
-            {/* ── BẢN ĐỒ / LƯỚI BÀN ──────────────────────────────────── */}
+            {/* ── LƯỚI BÀN ──────────────────────────────────────────── */}
             {loading ? (
               <div className="floorplan-loading">
                 <div className="spinner-lg" />
-                <p>Đang tải dữ liệu sơ đồ bàn...</p>
+                <p>Đang tải sơ đồ bàn...</p>
               </div>
             ) : filteredTables.length === 0 ? (
               <div className="floorplan-empty">
-                <span style={{ fontSize: '3rem' }}>🪑</span>
                 <h3>Không tìm thấy bàn phù hợp</h3>
-                <p>Thử đổi khu vực hoặc bộ lọc trạng thái phía trên.</p>
+                <p>Thử đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
                 <button
                   type="button"
                   className="reset-filter-btn"
                   onClick={() => {
-                    setSelectedArea('ALL')
                     setStatusFilter('ALL')
                     setSearchTable('')
                   }}
@@ -750,102 +690,47 @@ function StaffDashboard() {
                   const activeOrder = orders.find(
                     o => o.tableId === table.id && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
                   )
-                  const area = getTableArea(table)
-                  const areaInfo = getAreaInfo(area)
                   const capacity = table.capacity || 4
 
                   return (
                     <div
                       key={table.id}
-                      className={`floor-table-node ${effStatus} ${area.toLowerCase()}`}
+                      className={`floor-table-node ${effStatus}`}
                       onClick={() => handleTableClick(table)}
                     >
-                      {/* Biểu tượng ghế ngồi xung quanh bàn (Visual Seats) */}
-                      {floorViewMode === 'floorplan' && (
-                        <div className="visual-seats-ring" data-seats={capacity}>
-                          {Array.from({ length: Math.min(capacity, 8) }).map((_, seatIdx) => (
-                            <span key={seatIdx} className={`seat-dot seat-${seatIdx + 1}`} />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Mặt bàn chính */}
                       <div className="table-surface">
-                        {/* Header của thẻ bàn */}
-                        <div className="table-surface-header">
-                          <span className="table-area-tag" title={areaInfo.name}>
-                            {areaInfo.icon} {areaInfo.shortName}
-                          </span>
-                          <span className={`table-status-badge ${cfg.badgeClass}`}>
-                            {cfg.icon} {cfg.label}
-                          </span>
+                        {/* Ribbon trạng thái */}
+                        <div className={`table-status-ribbon ${cfg.badgeClass}`}>
+                          {cfg.label}
                         </div>
 
-                        {/* Số bàn chính giữa */}
+                        {/* Số bàn + sức chứa */}
                         <div className="table-surface-center">
-                          <div className="table-number-label">
-                            BÀN {table.tableNumber}
-                          </div>
-                          <div className="table-capacity-label">
-                            👥 {capacity} ghế
-                          </div>
+                          <div className="table-number-label">Bàn {table.tableNumber}</div>
+                          <div className="table-capacity-label">{capacity} chỗ ngồi</div>
                         </div>
 
-                        {/* Thông tin đơn hàng / Hành động dưới mặt bàn */}
+                        {/* Thông tin đơn / hành động */}
                         <div className="table-surface-footer">
                           {activeOrder ? (
-                            <div className="table-order-preview">
-                              <div className="order-price">
-                                {formatCurrency(activeOrder.totalAmount)}
-                              </div>
-                              <div className="order-meta">
-                                <span>{activeOrder.items?.length || 0} món</span>
-                                <span>• #{activeOrder.id}</span>
-                              </div>
+                            <div className="table-order-info">
+                              <span className="order-price">{formatCurrency(activeOrder.totalAmount)}</span>
+                              <span className="order-meta">{activeOrder.items?.length || 0} món</span>
                             </div>
                           ) : effStatus === 'RESERVED' ? (
-                            <div className="reserved-preview">
-                              <span>📋 Khách đặt trước</span>
-                            </div>
+                            <div className="table-footer-hint reserved">Đã đặt trước</div>
                           ) : (
-                            <div className="available-preview">
-                              <span>+ Chạm mở bàn</span>
-                            </div>
+                            <button
+                              type="button"
+                              className="table-open-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleTableClick(table)
+                              }}
+                            >
+                              Mở bàn
+                            </button>
                           )}
-
-                          {/* Quick Action Button */}
-                          <div className="table-quick-action">
-                            {effStatus === 'AVAILABLE' && (
-                              <button
-                                type="button"
-                                className="action-chip available"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleTableClick(table)
-                                }}
-                              >
-                                ➕ Mở bàn
-                              </button>
-                            )}
-                            {effStatus === 'OCCUPIED' && (
-                              <button
-                                type="button"
-                                className="action-chip billing-req"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleRequestBilling(table, activeOrder)
-                                }}
-                                title="Báo khách xin tính tiền"
-                              >
-                                🟣 Xin bill
-                              </button>
-                            )}
-                            {effStatus === 'BILLING_REQUESTED' && (
-                              <span className="pulse-billing-tag">
-                                ⚡ Chờ tính tiền
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -856,7 +741,7 @@ function StaffDashboard() {
           </div>
         ) : (
           /* ══════════════════════════════════════════════════════════════
-             VIEW 2: MÀN HÌNH GỌI MÓN CẦM TAY (MOBILE POS ORDERING)
+             VIEW 2: MÀN HÌNH GỌI MÓN CHUYÊN NGHIỆP (RESTAURANT POS ORDERING)
              ══════════════════════════════════════════════════════════════ */
           <div className="waiter-pos-layout">
             {/* ── BẢNG CHỌN MÓN (MENU PANE) ────────────────────────── */}
@@ -864,13 +749,25 @@ function StaffDashboard() {
               {/* Header gọi món */}
               <div className="pos-table-header">
                 <div className="pos-table-badge">
-                  <span className="table-icon">🪑</span>
-                  <div>
-                    <div className="pos-table-title">
-                      BÀN {selectedTable?.tableNumber}
+                  <div className="pos-table-avatar">
+                    <span className="table-prefix">BÀN</span>
+                    <span className="table-num">{selectedTable?.tableNumber}</span>
+                  </div>
+                  <div className="pos-table-meta">
+                    <div className="pos-table-title-row">
+                      <h3 className="pos-table-title">Bàn {selectedTable?.tableNumber}</h3>
+                      <span className={`pos-table-status-tag ${activeTableOrder ? 'occupied' : 'new'}`}>
+                        {activeTableOrder ? 'Đang phục vụ' : 'Mở bàn mới'}
+                      </span>
                     </div>
                     <div className="pos-table-sub">
-                      {getAreaInfo(getTableArea(selectedTable || {})).name} • {selectedTable?.capacity || 4} chỗ
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
+                      <span>Sức chứa: {selectedTable?.capacity || 4} chỗ</span>
                     </div>
                   </div>
                 </div>
@@ -883,8 +780,13 @@ function StaffDashboard() {
                       setViewMode('tables')
                       setCartDrawerOpen(false)
                     }}
+                    title="Quay lại danh sách bàn"
                   >
-                    ✕ Đổi bàn
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12"></line>
+                      <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <span>Đổi bàn khác</span>
                   </button>
                 </div>
               </div>
@@ -897,22 +799,41 @@ function StaffDashboard() {
                     className={`tab-pill ${menuTab === 'dish' ? 'active' : ''}`}
                     onClick={() => setMenuTab('dish')}
                   >
-                    🍲 Món ({menuItems.length})
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                      <line x1="6" y1="1" x2="6" y2="4"></line>
+                      <line x1="10" y1="1" x2="10" y2="4"></line>
+                      <line x1="14" y1="1" x2="14" y2="4"></line>
+                    </svg>
+                    <span>Món lẻ</span>
+                    <span className="tab-count-badge">{menuItems.length}</span>
                   </button>
                   <button
                     type="button"
                     className={`tab-pill ${menuTab === 'combo' ? 'active' : ''}`}
                     onClick={() => setMenuTab('combo')}
                   >
-                    🍱 Combo ({combos.length})
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span>Gói Combo</span>
+                    <span className="tab-count-badge">{combos.length}</span>
                   </button>
                 </div>
 
                 <div className="dish-search-input-wrap">
-                  <span className="search-icon">🔍</span>
+                  <span className="search-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
                   <input
                     type="text"
-                    placeholder="Tìm tên món ăn, thức uống..."
+                    placeholder="Tìm theo tên món, đồ uống..."
                     value={searchDish}
                     onChange={e => setSearchDish(e.target.value)}
                   />
@@ -932,7 +853,8 @@ function StaffDashboard() {
                     className={`cat-pill ${selectedCategory === 'ALL' ? 'active' : ''}`}
                     onClick={() => setSelectedCategory('ALL')}
                   >
-                    Tất cả ({menuItems.length})
+                    <span>Tất cả</span>
+                    <span className="cat-count-badge">{menuItems.length}</span>
                   </button>
                   {categories.map(cat => {
                     const catCount = menuItems.filter(m => m.categoryId === cat.id).length
@@ -943,24 +865,32 @@ function StaffDashboard() {
                         className={`cat-pill ${selectedCategory === String(cat.id) ? 'active' : ''}`}
                         onClick={() => setSelectedCategory(String(cat.id))}
                       >
-                        {cat.name} ({catCount})
+                        <span>{cat.name}</span>
+                        <span className="cat-count-badge">{catCount}</span>
                       </button>
                     )
                   })}
                 </div>
               )}
 
-              {/* Lưới hiển thị món ăn (Touch friendly mobile cards) */}
+              {/* Lưới hiển thị món ăn */}
               <div className="waiter-dishes-grid">
                 {menuTab === 'dish' ? (
                   filteredMenuItems.length === 0 ? (
                     <div className="menu-grid-empty">
-                      <span>🍲</span>
-                      <p>Không tìm thấy món ăn phù hợp</p>
+                      <div className="empty-dish-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                        </svg>
+                      </div>
+                      <h4>Không tìm thấy món phù hợp</h4>
+                      <p>Hãy thử tìm bằng từ khóa khác hoặc chuyển danh mục.</p>
                     </div>
                   ) : (
                     filteredMenuItems.map(dish => {
                       const inCart = cart.find(c => c.menuItemId === dish.id)
+                      const catName = categories.find(c => c.id === dish.categoryId)?.name
                       return (
                         <div
                           key={dish.id}
@@ -975,18 +905,27 @@ function StaffDashboard() {
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="dish-thumb-placeholder">🍲</div>
+                              <div className="dish-thumb-placeholder">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                                  <line x1="6" y1="1" x2="6" y2="4"></line>
+                                  <line x1="10" y1="1" x2="10" y2="4"></line>
+                                  <line x1="14" y1="1" x2="14" y2="4"></line>
+                                </svg>
+                              </div>
                             )}
 
                             {/* Badge số lượng nếu đã có trong giỏ */}
                             {inCart && (
                               <span className="dish-in-cart-badge">
-                                ✓ {inCart.quantity}
+                                ×{inCart.quantity}
                               </span>
                             )}
                           </div>
 
                           <div className="dish-card-body">
+                            {catName && <span className="dish-category-tag">{catName}</span>}
                             <h4 className="dish-name" title={dish.name}>{dish.name}</h4>
                             <div className="dish-bottom-row">
                               <span className="dish-price">{formatCurrency(dish.price)}</span>
@@ -997,9 +936,13 @@ function StaffDashboard() {
                                   e.stopPropagation()
                                   handleAddToCart(dish, false)
                                 }}
-                                title="Thêm vào giỏ"
+                                title="Thêm vào đơn"
                               >
-                                +
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <span>Thêm</span>
                               </button>
                             </div>
                           </div>
@@ -1010,8 +953,15 @@ function StaffDashboard() {
                 ) : (
                   filteredCombos.length === 0 ? (
                     <div className="menu-grid-empty">
-                      <span>🍱</span>
-                      <p>Không tìm thấy combo phù hợp</p>
+                      <div className="empty-dish-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                          <line x1="8" y1="21" x2="16" y2="21"></line>
+                          <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                      </div>
+                      <h4>Không tìm thấy combo phù hợp</h4>
+                      <p>Hãy thử tìm bằng từ khóa khác.</p>
                     </div>
                   ) : (
                     filteredCombos.map(combo => {
@@ -1030,16 +980,23 @@ function StaffDashboard() {
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="dish-thumb-placeholder">🍱</div>
+                              <div className="dish-thumb-placeholder">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg>
+                              </div>
                             )}
                             {inCart && (
                               <span className="dish-in-cart-badge">
-                                ✓ {inCart.quantity}
+                                ×{inCart.quantity}
                               </span>
                             )}
                           </div>
 
                           <div className="dish-card-body">
+                            <span className="dish-category-tag combo">Combo tiết kiệm</span>
                             <h4 className="dish-name" title={combo.name}>{combo.name}</h4>
                             <div className="dish-bottom-row">
                               <span className="dish-price">{formatCurrency(combo.price)}</span>
@@ -1052,7 +1009,11 @@ function StaffDashboard() {
                                 }}
                                 title="Thêm combo"
                               >
-                                +
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <span>Thêm</span>
                               </button>
                             </div>
                           </div>
@@ -1068,39 +1029,69 @@ function StaffDashboard() {
             <div className={`waiter-cart-pane ${cartDrawerOpen ? 'drawer-open' : ''}`}>
               <div className="cart-pane-header">
                 <div className="cart-title-wrap">
-                  <span className="cart-icon">🛒</span>
+                  <div className="cart-header-icon-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                      <line x1="3" y1="6" x2="21" y2="6"></line>
+                      <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                  </div>
                   <div>
                     <h3 className="cart-title">Đơn gọi món</h3>
-                    <span className="cart-sub">BÀN {selectedTable?.tableNumber} ({cartTotalQty} món)</span>
+                    <span className="cart-sub">Bàn {selectedTable?.tableNumber} • {cartTotalQty} phần</span>
                   </div>
                 </div>
 
-                {/* Nút đóng drawer trên mobile */}
-                <button
-                  type="button"
-                  className="cart-close-drawer-btn"
-                  onClick={() => setCartDrawerOpen(false)}
-                >
-                  ✕
-                </button>
+                <div className="cart-header-actions">
+                  {cart.length > 0 && (
+                    <button
+                      type="button"
+                      className="cart-clear-all-btn"
+                      onClick={() => setCart([])}
+                      title="Xóa tất cả món đã chọn"
+                    >
+                      Xóa hết
+                    </button>
+                  )}
+                  {/* Nút đóng drawer trên mobile */}
+                  <button
+                    type="button"
+                    className="cart-close-drawer-btn"
+                    onClick={() => setCartDrawerOpen(false)}
+                    title="Đóng giỏ hàng"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {/* Danh sách món trong giỏ */}
               <div className="cart-items-container">
                 {cart.length === 0 ? (
                   <div className="cart-empty-state">
-                    <span className="cart-empty-icon">🍽️</span>
+                    <div className="cart-empty-illustration">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                      </svg>
+                    </div>
                     <h4>Chưa chọn món nào</h4>
-                    <p>Chạm vào các món bên cạnh để thêm vào đơn của bàn.</p>
+                    <p>Chạm vào các món trong thực đơn để thêm vào đơn của Bàn {selectedTable?.tableNumber}.</p>
                   </div>
                 ) : (
                   cart.map((item, idx) => (
                     <div key={item.key || idx} className="cart-item-card">
                       <div className="cart-item-top">
+                        {item.image && (
+                          <div className="cart-item-thumb">
+                            <img src={getImageFullUrl(item.image)} alt={item.name} />
+                          </div>
+                        )}
                         <div className="cart-item-info">
                           <span className="cart-item-name">{item.name}</span>
-                          <span className="cart-item-price">
-                            {formatCurrency(item.price * item.quantity)}
+                          <span className="cart-item-unit-price">
+                            {formatCurrency(item.price)}
                           </span>
                         </div>
 
@@ -1110,9 +1101,14 @@ function StaffDashboard() {
                             type="button"
                             className="stepper-btn minus"
                             onClick={() => handleUpdateCartQty(idx, -1)}
-                            title="Giảm 1"
+                            title={item.quantity === 1 ? "Xóa khỏi đơn" : "Giảm 1"}
                           >
-                            −
+                            {item.quantity === 1 ? (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                            ) : '−'}
                           </button>
                           <span className="stepper-val">{item.quantity}</span>
                           <button
@@ -1123,14 +1119,10 @@ function StaffDashboard() {
                           >
                             +
                           </button>
-                          <button
-                            type="button"
-                            className="stepper-btn delete"
-                            onClick={() => handleRemoveFromCart(idx)}
-                            title="Xóa món"
-                          >
-                            🗑️
-                          </button>
+                        </div>
+
+                        <div className="cart-item-line-total">
+                          {formatCurrency(item.price * item.quantity)}
                         </div>
                       </div>
 
@@ -1151,7 +1143,7 @@ function StaffDashboard() {
                       {/* Ô nhập ghi chú */}
                       <input
                         type="text"
-                        placeholder="Ghi chú thêm (vd: ít ngọt, mang ra trước...)"
+                        placeholder="Ghi chú món (vd: ít đường, mang ra trước...)"
                         value={item.note || ''}
                         onChange={e => handleUpdateCartNote(idx, e.target.value)}
                         className="cart-note-input"
@@ -1164,23 +1156,37 @@ function StaffDashboard() {
               {/* Footer giỏ hàng */}
               <div className="cart-pane-footer">
                 {!activeTableOrder && (
-                  <input
-                    type="text"
-                    placeholder="Ghi chú chung cho đơn (nếu có)..."
-                    value={orderNote}
-                    onChange={e => setOrderNote(e.target.value)}
-                    className="order-general-note-input"
-                  />
+                  <div className="order-general-note-wrap">
+                    <span className="general-note-icon">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Ghi chú chung cho toàn bàn..."
+                      value={orderNote}
+                      onChange={e => setOrderNote(e.target.value)}
+                      className="order-general-note-input"
+                    />
+                  </div>
                 )}
 
-                <div className="cart-total-row">
-                  <span>TỔNG CỘNG:</span>
-                  <span className="cart-total-amount">{formatCurrency(cartTotal)}</span>
+                <div className="cart-summary-rows">
+                  <div className="summary-row">
+                    <span className="summary-label">Tạm tính ({cartTotalQty} món)</span>
+                    <span className="summary-val">{formatCurrency(cartTotal)}</span>
+                  </div>
+                  <div className="summary-row total-highlight">
+                    <span className="summary-label">TỔNG CỘNG</span>
+                    <span className="summary-total-amount">{formatCurrency(cartTotal)}</span>
+                  </div>
                 </div>
 
                 <button
                   type="button"
-                  className="cart-submit-btn"
+                  className={`cart-submit-btn ${cart.length === 0 ? 'disabled' : ''}`}
                   disabled={submittingOrder || cart.length === 0}
                   onClick={handleSubmitOrder}
                 >
@@ -1191,7 +1197,11 @@ function StaffDashboard() {
                     </>
                   ) : (
                     <>
-                      <span>🚀 GỬI ĐƠN VÀO BẾP</span>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                      <span>{activeTableOrder ? 'GỬI THÊM VÀO BẾP' : 'GỬI ĐƠN VÀO BẾP'}</span>
                       <span className="submit-qty">({cartTotalQty} món)</span>
                     </>
                   )}
@@ -1214,7 +1224,11 @@ function StaffDashboard() {
                 </div>
 
                 <button type="button" className="floating-submit-btn">
-                  Gửi bếp 🚀
+                  <span>Gửi bếp</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
                 </button>
               </div>
             )}
@@ -1233,10 +1247,10 @@ function StaffDashboard() {
                   <span className="modal-order-id">#ORD-{activeTableOrder.id}</span>
                 </div>
                 <p className="modal-table-sub">
-                  Khu vực: <strong>{getAreaInfo(getTableArea(selectedTable)).name}</strong>
+                  Sức chứa: <strong>{selectedTable?.capacity || 4} chỗ</strong>
                   {' • '}
-                  Trạng thái: <strong style={{ color: activeTableOrder.status === 'BILLING_REQUESTED' ? '#a855f7' : '#ef4444' }}>
-                    {activeTableOrder.status === 'BILLING_REQUESTED' ? '🟣 Yêu cầu thanh toán' : '🔴 Đang phục vụ'}
+                  Trạng thái: <strong style={{ color: '#d86888' }}>
+                    Đang phục vụ
                   </strong>
                 </p>
               </div>
@@ -1321,18 +1335,10 @@ function StaffDashboard() {
 
               <button
                 type="button"
-                className="modal-btn req-bill"
-                onClick={() => handleRequestBilling(selectedTable, activeTableOrder)}
-              >
-                🟣 Yêu cầu thanh toán
-              </button>
-
-              <button
-                type="button"
                 className="modal-btn checkout"
                 onClick={handleCheckoutTable}
               >
-                💰 Thu tiền & Trả bàn
+                💰 Thu tiền &amp; Trả bàn
               </button>
             </div>
           </div>

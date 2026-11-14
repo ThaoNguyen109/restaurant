@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import './KitchenPage.css'
+import '../../styles/pages/staff/KitchenPage.css'
 import { getRole } from '../../utils/auth'
 import {
   getAllOrders,
@@ -50,7 +50,6 @@ function KitchenPage() {
   // ── Fetch Orders ──────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     try {
-      // Lấy các đơn chưa hoàn tất/hủy
       const data = await getAllOrders()
       const activeOrders = (data || []).filter(
         o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
@@ -82,15 +81,14 @@ function KitchenPage() {
       console.log('[KDS Realtime Event]:', event)
       if (event?.eventType === 'ORDER_CREATED' || event?.eventType === 'ITEM_ADDED') {
         playKitchenAlert()
-        showToast(`🔔 ${event.message || 'Có món mới cần nấu!'}`)
+        showToast(event.message || 'Có món mới cần nấu!')
       } else if (event?.message) {
-        showToast(`ℹ️ ${event.message}`)
+        showToast(event.message)
       }
 
       fetchOrders()
     })
 
-    // Fallback polling every 30s to guarantee sync if connection fluctuates
     const interval = setInterval(fetchOrders, 30000)
 
     return () => {
@@ -103,9 +101,8 @@ function KitchenPage() {
   const handleItemStatusChange = async (orderId, itemId, newStatus) => {
     try {
       await updateOrderItemStatus(orderId, itemId, newStatus)
-      showToast(`Đã chuyển món sang ${newStatus === 'COOKING' ? 'ĐANG NẤU' : 'ĐÃ LÊN MÓN'}`)
+      showToast(`Đã chuyển món sang ${newStatus === 'COOKING' ? 'Đang nấu' : 'Đã hoàn thành'}`)
 
-      // If item becomes COOKING, also ensure order is PREPARING
       if (newStatus === 'COOKING') {
         const order = orders.find(o => o.id === orderId)
         if (order && order.status === 'PENDING') {
@@ -126,7 +123,7 @@ function KitchenPage() {
         await updateOrderItemStatus(order.id, it.id, 'COOKING')
       }
       await updateOrderStatus(order.id, 'PREPARING')
-      showToast(`Đã bắt đầu nấu tất cả món bàn ${order.tableNumber}`)
+      showToast(`Bắt đầu nấu tất cả món bàn ${order.tableNumber}`)
       fetchOrders()
     } catch (err) {
       showToast('Lỗi thao tác: ' + (err.message || ''))
@@ -155,7 +152,7 @@ function KitchenPage() {
       setMenuItems(prev =>
         prev.map(m => (m.id === item.id ? { ...m, status: newStatus } : m))
       )
-      showToast(`Đã ${newStatus === 'OUT_OF_STOCK' ? 'BÁO HẾT MÓN' : 'MỞ LẠI MÓN'}: ${item.name}`)
+      showToast(`Đã cập nhật trạng thái món: ${item.name}`)
     } catch (err) {
       showToast('Lỗi cập nhật trạng thái món: ' + (err.message || ''))
     }
@@ -183,9 +180,8 @@ function KitchenPage() {
       {/* 1. TOP BAR */}
       <header className="kds-topbar">
         <div className="kds-brand">
-          <div className="kds-logo-icon">🍳</div>
-          <div>
-            <h1 className="kds-title">LOTUS KITCHEN (KDS)</h1>
+          <div className="kds-brand-text">
+            <h1 className="kds-title">LOTUS KITCHEN</h1>
             <p className="kds-subtitle">Hệ thống điều phối Bếp & Pha chế</p>
           </div>
         </div>
@@ -195,25 +191,31 @@ function KitchenPage() {
             className={`kds-nav-btn ${activeTab === 'kds' ? 'active' : ''}`}
             onClick={() => setActiveTab('kds')}
           >
-            📋 Màn hình Bếp ({orders.length} đơn)
+            <span>Màn hình Bếp</span>
+            <span className="kds-tab-counter">{orders.length}</span>
           </button>
           <button
             className={`kds-nav-btn ${activeTab === 'stock' ? 'active' : ''}`}
             onClick={() => setActiveTab('stock')}
           >
-            🚫 Báo hết món ({menuItems.filter(m => m.status === 'OUT_OF_STOCK').length} món hết)
+            <span>Báo hết món</span>
+            <span className="kds-tab-counter warn">
+              {menuItems.filter(m => m.status === 'OUT_OF_STOCK').length}
+            </span>
           </button>
         </div>
 
         <div className="kds-topbar-right">
           <div className="kds-clock">{currentTime}</div>
-          <button className="kds-nav-btn" onClick={fetchOrders} title="Làm mới">
-            🔄
+          <button className="kds-refresh-btn" onClick={fetchOrders} title="Làm mới">
+            Làm mới
           </button>
-          {canAccessStaff   && <a href="/staff"              className="kds-role-link">🍽️ Phục vụ</a>}
-          {canAccessStaff   && <a href="/staff/reservations" className="kds-role-link">📅 Đặt bàn</a>}
-          {canAccessCashier && <a href="/cashier"            className="kds-role-link">💰 Thu ngân</a>}
-          {canAccessAdmin   && <a href="/admin/orders"       className="kds-role-link">📊 Admin</a>}
+          <div className="kds-role-links">
+            {canAccessStaff   && <a href="/staff"              className="kds-role-link">Phục vụ</a>}
+            {canAccessStaff   && <a href="/staff/reservations" className="kds-role-link">Đặt bàn</a>}
+            {canAccessCashier && <a href="/cashier"            className="kds-role-link">Thu ngân</a>}
+            {canAccessAdmin   && <a href="/admin/orders"       className="kds-role-link">Quản trị</a>}
+          </div>
         </div>
       </header>
 
@@ -223,19 +225,19 @@ function KitchenPage() {
           <>
             {/* Metrics */}
             <div className="kds-metrics">
-              <div className="kds-metric-box">
-                <span className="kds-metric-label">Đơn đang hoạt động</span>
+              <div className="kds-metric-box total">
+                <span className="kds-metric-label">Đơn đang phục vụ</span>
                 <span className="kds-metric-value">{orders.length}</span>
               </div>
-              <div className="kds-metric-box">
+              <div className="kds-metric-box pending">
                 <span className="kds-metric-label">Món chờ nấu</span>
                 <span className="kds-metric-value pending">{totalPendingItems}</span>
               </div>
-              <div className="kds-metric-box">
+              <div className="kds-metric-box cooking">
                 <span className="kds-metric-label">Món đang nấu</span>
                 <span className="kds-metric-value cooking">{totalCookingItems}</span>
               </div>
-              <div className="kds-metric-box">
+              <div className="kds-metric-box done">
                 <span className="kds-metric-label">Đã lên món</span>
                 <span className="kds-metric-value done">{totalServedItems}</span>
               </div>
@@ -243,13 +245,14 @@ function KitchenPage() {
 
             {/* Orders Grid */}
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
-                Đang tải dữ liệu bếp...
+              <div className="kds-loading">
+                <div className="kds-spinner" />
+                <p>Đang tải dữ liệu bếp...</p>
               </div>
             ) : orders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 20px', color: '#64748b' }}>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>✨</div>
-                <h2 style={{ color: '#cbd5e1', margin: 0 }}>Hiện không có món nào cần nấu</h2>
+              <div className="kds-empty">
+                <div className="kds-empty-indicator" />
+                <h2>Hiện không có món nào cần nấu</h2>
                 <p>Các đơn hàng mới của nhân viên phục vụ sẽ hiển thị tại đây ngay lập tức.</p>
               </div>
             ) : (
@@ -265,15 +268,13 @@ function KitchenPage() {
                     >
                       {/* Card Header */}
                       <div className="kds-card-header">
-                        <div>
-                          <div className="kds-table-title">
-                            BÀN {order.tableNumber || '?'}
-                          </div>
-                          <div className="kds-order-num">#ORD-{order.id}</div>
+                        <div className="kds-card-header-left">
+                          <span className="kds-table-title">BÀN {order.tableNumber || '?'}</span>
+                          <span className="kds-order-num">#ORD-{order.id}</span>
                         </div>
 
-                        <div className={`kds-timer-badge ${elapsed >= 20 ? 'danger' : elapsed >= 10 ? 'warning' : ''}`}>
-                          ⏱️ {elapsed} phút trước
+                        <div className={`kds-timer-badge ${elapsed >= 20 ? 'danger' : elapsed >= 10 ? 'warning' : 'normal'}`}>
+                          {elapsed} phút trước
                         </div>
                       </div>
 
@@ -281,7 +282,7 @@ function KitchenPage() {
                       <div className="kds-card-body">
                         {order.note && (
                           <div className="kds-order-note">
-                            📝 Đơn: {order.note}
+                            <span className="kds-note-title">Ghi chú:</span> {order.note}
                           </div>
                         )}
 
@@ -289,14 +290,12 @@ function KitchenPage() {
                           {(order.items || []).map(item => (
                             <div key={item.id} className={`kds-item-row ${item.status}`}>
                               <div className="kds-item-main">
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <div className="kds-item-info">
                                   <span className="kds-item-qty">{item.quantity}x</span>
-                                  <div>
+                                  <div className="kds-item-text">
                                     <span className="kds-item-name">{item.itemName}</span>
                                     {item.note && (
-                                      <div>
-                                        <span className="kds-item-note">📝 {item.note}</span>
-                                      </div>
+                                      <span className="kds-item-note">Ghi chú: {item.note}</span>
                                     )}
                                   </div>
                                 </div>
@@ -308,7 +307,7 @@ function KitchenPage() {
                                   className="kds-item-btn start"
                                   onClick={() => handleItemStatusChange(order.id, item.id, 'COOKING')}
                                 >
-                                  🍳 Bắt đầu nấu
+                                  Nấu món
                                 </button>
                               )}
 
@@ -317,13 +316,13 @@ function KitchenPage() {
                                   className="kds-item-btn finish"
                                   onClick={() => handleItemStatusChange(order.id, item.id, 'SERVED')}
                                 >
-                                  ✅ Nấu xong / Lên món
+                                  Hoàn thành
                                 </button>
                               )}
 
                               {item.status === 'SERVED' && (
                                 <div className="kds-item-btn done-badge">
-                                  ✓ Đã lên món
+                                  Đã lên món
                                 </div>
                               )}
                             </div>
@@ -334,16 +333,16 @@ function KitchenPage() {
                       {/* Card Footer: Batch Actions */}
                       <div className="kds-card-footer">
                         <button
-                          className="kds-batch-btn"
+                          className="kds-batch-btn start-all"
                           onClick={() => handleStartAllItems(order)}
                         >
-                          🍳 Nấu tất cả
+                          Bắt đầu nấu tất cả
                         </button>
                         <button
                           className="kds-batch-btn complete-all"
                           onClick={() => handleCompleteAllItems(order)}
                         >
-                          ✅ Xong toàn bộ
+                          Hoàn thành tất cả
                         </button>
                       </div>
                     </div>
@@ -359,12 +358,12 @@ function KitchenPage() {
               <input
                 type="text"
                 className="kds-stock-search"
-                placeholder="🔍 Tìm kiếm món ăn để bật/tắt hết hàng..."
+                placeholder="Tìm kiếm món ăn để bật/tắt phục vụ..."
                 value={stockSearch}
                 onChange={e => setStockSearch(e.target.value)}
               />
-              <span style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
-                Tổng {menuItems.length} món
+              <span className="kds-stock-count">
+                Tổng cộng {menuItems.length} món
               </span>
             </div>
 
@@ -382,15 +381,15 @@ function KitchenPage() {
                           className="kds-stock-thumb"
                         />
                       ) : (
-                        <div className="kds-stock-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
-                          🍲
+                        <div className="kds-stock-thumb empty">
+                          Món
                         </div>
                       )}
                       <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>
+                        <div className="kds-stock-name">
                           {item.name}
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                        <div className="kds-stock-cat">
                           {item.categoryName || 'Món ăn'}
                         </div>
                       </div>
@@ -400,7 +399,7 @@ function KitchenPage() {
                       className={`kds-stock-toggle-btn ${isOutOfStock ? 'out' : 'active'}`}
                       onClick={() => handleToggleStockStatus(item)}
                     >
-                      {isOutOfStock ? '🔴 ĐANG HẾT HÀNG (Bấm mở lại)' : '🟢 ĐANG PHỤC VỤ (Bấm báo hết)'}
+                      {isOutOfStock ? 'Hết hàng (Bấm để mở lại)' : 'Đang phục vụ (Bấm để báo hết)'}
                     </button>
                   </div>
                 )
@@ -411,7 +410,7 @@ function KitchenPage() {
       </main>
 
       {/* Toast */}
-      {toast && <div className="kds-toast">⚡ {toast}</div>}
+      {toast && <div className="kds-toast">{toast}</div>}
     </div>
   )
 }

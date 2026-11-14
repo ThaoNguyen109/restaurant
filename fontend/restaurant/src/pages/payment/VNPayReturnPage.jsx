@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
-import './VNPayReturnPage.css'
+import '../../styles/pages/payment/VNPayReturnPage.css'
 import { verifyVNPayCallback } from '../../services/paymentService'
 
 function formatCurrency(amount) {

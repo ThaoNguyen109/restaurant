@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import './CashierPage.css'
+import '../../styles/pages/staff/CashierPage.css'
 import { getAllOrders, updateOrderStatus, getOrderStats, getOrderById } from '../../services/orderService'
 import { getRole } from '../../utils/auth'
-import { createVNPayUrl } from '../../services/paymentService'
+import { createVNPayUrl, processPaymentCheckout } from '../../services/paymentService'
 import { subscribeWebSocket } from '../../services/websocketService'
 
 function formatCurrency(amount) {
@@ -218,21 +218,31 @@ function CashierPage() {
     }
     setSubmittingCheckout(true)
     try {
-      const updated = await updateOrderStatus(selectedOrder.id, 'COMPLETED')
+      const paymentRecord = await processPaymentCheckout({
+        orderId: selectedOrder.id,
+        amount: finalTotal,
+        paymentMethod: paymentMethod || 'CASH',
+        cashGiven: numCashGiven,
+        changeAmount: changeAmount,
+        discountAmount: discountAmount,
+        discountPercent: discountPercent,
+        note: `Thanh toán tại quầy - Bàn ${selectedOrder.tableNumber || 'Mang về'}`
+      })
+
       showToast(`Thanh toán thành công đơn #${selectedOrder.id} - Bàn ${selectedOrder.tableNumber}!`)
       setVnpayUrl('')
       setVnpayLoading(false)
       const completedData = {
         ...selectedOrder,
-        ...(updated || {}),
         status: 'COMPLETED',
-        paymentMethod: 'CASH',
+        paymentId: paymentRecord?.id,
+        paymentMethod: paymentRecord?.paymentMethod || paymentMethod || 'CASH',
         discountPercent,
         discountAmount,
         finalTotal,
         cashGiven: numCashGiven,
         changeAmount,
-        paidAt: new Date().toISOString()
+        paidAt: paymentRecord?.createdAt || new Date().toISOString()
       }
       completedOrderRef.current = completedData
       setCompletedOrder(completedData)

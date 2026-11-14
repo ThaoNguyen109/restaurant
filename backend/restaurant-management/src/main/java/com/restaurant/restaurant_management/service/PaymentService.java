@@ -3,7 +3,9 @@ package com.restaurant.restaurant_management.service;
 import com.restaurant.restaurant_management.config.VNPayConfig;
 import com.restaurant.restaurant_management.dto.*;
 import com.restaurant.restaurant_management.entity.Order;
+import com.restaurant.restaurant_management.entity.Payment;
 import com.restaurant.restaurant_management.repository.OrderRepository;
+import com.restaurant.restaurant_management.repository.PaymentRepository;
 import com.restaurant.restaurant_management.util.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class PaymentService {
 
     private final VNPayConfig vnPayConfig;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
     private final OrderService orderService;
     private final WebSocketEventService wsEventService;
 
@@ -91,9 +95,7 @@ public class PaymentService {
                     hashData.append("&");
                     query.append("&");
                 }
-                // Build hash data
                 hashData.append(fieldName).append("=").append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                // Build query
                 query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII))
                      .append("=")
                      .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
@@ -169,6 +171,27 @@ public class PaymentService {
             if (orderId != null) {
                 Order order = orderRepository.findById(orderId).orElse(null);
                 if (order != null) {
+                    // 1. Lưu bản ghi Payment nếu chưa có
+                    Optional<Payment> existingPayment = paymentRepository.findByTxnRef(vnpTxnRef);
+                    if (existingPayment.isEmpty()) {
+                        Payment payment = new Payment();
+                        payment.setOrder(order);
+                        payment.setAmount(BigDecimal.valueOf(amount));
+                        payment.setPaymentMethod("VNPAY");
+                        payment.setStatus("SUCCESS");
+                        payment.setTransactionCode(vnpTransactionNo);
+                        payment.setTxnRef(vnpTxnRef);
+                        payment.setBankCode(vnpBankCode);
+                        payment.setDiscountAmount(BigDecimal.ZERO);
+                        payment.setDiscountPercent(0);
+                        payment.setNote("Thanh toán thành công qua cổng VNPay");
+                        payment.setCreatedAt(LocalDateTime.now());
+                        payment.setUpdatedAt(LocalDateTime.now());
+                        paymentRepository.save(payment);
+                        log.info("Saved VNPay Payment record for Order #{}", orderId);
+                    }
+
+                    // 2. Ghi chú và cập nhật trạng thái đơn hàng
                     String paymentNote = "[VNPay #" + vnpTransactionNo + " | " + vnpBankCode + "]";
                     if (order.getNote() == null || order.getNote().isBlank()) {
                         order.setNote("Đã thanh toán qua " + paymentNote);
@@ -218,6 +241,107 @@ public class PaymentService {
                     .payDate(vnpPayDate)
                     .build();
         }
+    }
+
+    /**
+     * Xử lý thanh toán Tiền mặt / Chuyển khoản / Cà thẻ trực tiếp tại quầy thu ngân
+     */
+    @Transactional
+    public PaymentResponse processCheckout(CashPaymentRequest request) {
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + request.getOrderId()));
+
+        BigDecimal amount = request.getAmount() != null && request.getAmount().compareTo(BigDecimal.ZERO) > 0
+                ? request.getAmount()
+                : order.getTotalAmount();
+
+        String method = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
+                ? request.getPaymentMethod().toUpperCase()
+                : "CASH";
+
+        LocalDateTime now = LocalDateTime.now();
+        String txnCode = "PAY_" + order.getId() + "_" + System.currentTimeMillis();
+
+        // 1. Tạo bản ghi thanh toán
+        Payment payment = new Payment();
+        payment.setOrder(order);
+        payment.setAmount(amount);
+        payment.setPaymentMethod(method);
+        payment.setStatus("SUCCESS");
+        payment.setTransactionCode(txnCode);
+        payment.setTxnRef(txnCode);
+        payment.setCashGiven(request.getCashGiven());
+        payment.setChangeAmount(request.getChangeAmount());
+        payment.setDiscountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO);
+        payment.setDiscountPercent(request.getDiscountPercent() != null ? request.getDiscountPercent() : 0);
+        payment.setNote(request.getNote() != null && !request.getNote().isBlank()
+                ? request.getNote()
+                : "Thanh toán thành công tại quầy (" + method + ")");
+        payment.setCreatedAt(now);
+        payment.setUpdatedAt(now);
+
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("Processed checkout for Order #{}, amount: {}, method: {}", order.getId(), amount, method);
+
+        // 2. Chuyển đơn sang COMPLETED
+        OrderResponse updatedOrder = orderService.updateOrderStatus(order.getId(), new OrderStatusRequest("COMPLETED"));
+
+        // 3. Gửi thông báo WebSocket
+        String methodText = "CASH".equalsIgnoreCase(method) ? "Tiền mặt" : ("BANK_TRANSFER".equalsIgnoreCase(method) ? "Chuyển khoản" : method);
+        wsEventService.sendOrderEvent(
+                "PAYMENT_SUCCESS",
+                "Đơn #" + order.getId() + " đã thanh toán " + amount + "đ bằng " + methodText,
+                updatedOrder
+        );
+
+        return toPaymentResponse(savedPayment);
+    }
+
+    /**
+     * Lấy lịch sử thanh toán của một đơn hàng
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getPaymentsByOrderId(Long orderId) {
+        return paymentRepository.findByOrderIdOrderByCreatedAtDesc(orderId)
+                .stream()
+                .map(this::toPaymentResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy toàn bộ danh sách thanh toán
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getAllPayments() {
+        return paymentRepository.findAll()
+                .stream()
+                .map(this::toPaymentResponse)
+                .collect(Collectors.toList());
+    }
+
+    public PaymentResponse toPaymentResponse(Payment p) {
+        Integer tableNum = null;
+        if (p.getOrder() != null && p.getOrder().getTable() != null) {
+            tableNum = p.getOrder().getTable().getTableNumber();
+        }
+
+        return PaymentResponse.builder()
+                .id(p.getId())
+                .orderId(p.getOrder() != null ? p.getOrder().getId() : null)
+                .tableNumber(tableNum)
+                .amount(p.getAmount())
+                .paymentMethod(p.getPaymentMethod())
+                .status(p.getStatus())
+                .transactionCode(p.getTransactionCode())
+                .txnRef(p.getTxnRef())
+                .bankCode(p.getBankCode())
+                .cashGiven(p.getCashGiven())
+                .changeAmount(p.getChangeAmount())
+                .discountAmount(p.getDiscountAmount())
+                .discountPercent(p.getDiscountPercent())
+                .note(p.getNote())
+                .createdAt(p.getCreatedAt())
+                .build();
     }
 
     private String getVNPayErrorMessage(String responseCode) {

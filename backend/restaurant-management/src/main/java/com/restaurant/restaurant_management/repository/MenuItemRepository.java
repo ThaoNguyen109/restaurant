@@ -17,6 +17,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
     boolean existsByName(String name);
 
+    java.util.Optional<MenuItem> findByName(String name);
+
     boolean existsByNameAndIdNot(String name, Long id);
 
     @Query("SELECT m FROM MenuItem m WHERE " +

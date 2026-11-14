@@ -1,5 +1,7 @@
 package com.restaurant.restaurant_management.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -10,6 +12,11 @@ import java.nio.file.Paths;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -23,8 +30,12 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
+        Path backendUploadPath = Paths.get("backend/restaurant-management/uploads").toAbsolutePath().normalize();
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadPath.toString() + "/");
+                .addResourceLocations(
+                        "file:" + uploadPath.toString() + "/",
+                        "file:" + backendUploadPath.toString() + "/"
+                );
     }
 }
 

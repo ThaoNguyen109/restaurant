@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import './CustomerMenuPage.css'
+import '../../styles/pages/customer/CustomerMenuPage.css'
 import { getAllCategories } from '../../services/categoryService'
 import { getAllMenuItems } from '../../services/menuItemService'
 import { getImageFullUrl } from '../../services/apiClient'
 import CustomerChatBox from '../../components/customer/CustomerChatBox'
+import { LotusLogo } from './CustomerPage'
 
 /* ── Format tiền VNĐ ── */
 const fmt = (n) => (!n ? '0' : Number(n).toLocaleString('vi-VN'))
@@ -13,7 +14,6 @@ const fmt = (n) => (!n ? '0' : Number(n).toLocaleString('vi-VN'))
    DISH DETAIL MODAL
 ═══════════════════════════════════════ */
 function DishModal({ dish, onClose, onBook }) {
-  // Đóng khi nhấn Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKey)
@@ -26,7 +26,7 @@ function DishModal({ dish, onClose, onBook }) {
     <div className="cmp-modal-bg" onClick={onClose}>
       <div className="cmp-modal" onClick={(e) => e.stopPropagation()}>
 
-        {/* Ảnh trái */}
+        {/* Cột ảnh trái */}
         <div className="cmp-modal-img-wrap">
           <img
             src={dish.image ? getImageFullUrl(dish.image) : fallback}
@@ -38,26 +38,26 @@ function DishModal({ dish, onClose, onBook }) {
           {dish.categoryName && (
             <span className="cmp-modal-img-cat">{dish.categoryName}</span>
           )}
-          <button className="cmp-modal-close" onClick={onClose} title="Đóng">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <button className="cmp-modal-close" onClick={onClose} title="Đóng modal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
 
-        {/* Nội dung phải */}
+        {/* Cột thông tin phải */}
         <div className="cmp-modal-content">
           <div className="cmp-modal-top">
-            <span className="cmp-modal-label">Món ăn đặc sắc</span>
+            <span className="cmp-modal-label">Món Ăn Đặc Sắc · Hoa Sen</span>
             <h2 className="cmp-modal-name">{dish.name}</h2>
 
             {dish.mainIngredients && (
               <div className="cmp-modal-ingr-box">
-                <div className="cmp-modal-ingr-title">Nguyên liệu chính</div>
+                <div className="cmp-modal-ingr-title">Nguyên liệu & Gia vị chính</div>
                 <p className="cmp-modal-ingr-text">{dish.mainIngredients}</p>
               </div>
             )}
 
             <p className="cmp-modal-desc">
-              {dish.description || 'Món ăn tinh tế được chuẩn bị công phu bởi bếp trưởng nhà hàng, mang đến hương vị đậm đà và trải nghiệm ẩm thực khó quên.'}
+              {dish.description || 'Món ăn tinh tế được chuẩn bị công phu bởi bếp trưởng nhà hàng Hoa Sen, mang đến hương vị đậm đà và trải nghiệm ẩm thực trọn vẹn.'}
             </p>
           </div>
 
@@ -66,7 +66,7 @@ function DishModal({ dish, onClose, onBook }) {
               {fmt(dish.price)} <small>VNĐ</small>
             </div>
             <button className="cmp-modal-cta" onClick={onBook}>
-              Đặt bàn ngay
+              🌸 Đặt Bàn Ngay
             </button>
           </div>
         </div>
@@ -83,24 +83,20 @@ function DishCard({ item, onClick }) {
 
   return (
     <div className="cmp-card" onClick={onClick}>
-      {/* Thumb */}
+      {/* Thumb image */}
       <div className="cmp-card-thumb">
-        {item.image ? (
-          <img
-            src={getImageFullUrl(item.image)}
-            alt={item.name}
-            loading="lazy"
-            onError={(e) => { e.target.src = fallback }}
-          />
-        ) : (
-          <img src={fallback} alt={item.name} loading="lazy" />
-        )}
+        <img
+          src={item.image ? getImageFullUrl(item.image) : fallback}
+          alt={item.name}
+          loading="lazy"
+          onError={(e) => { e.target.src = fallback }}
+        />
         {item.categoryName && (
           <span className="cmp-card-cat-tag">{item.categoryName}</span>
         )}
       </div>
 
-      {/* Body */}
+      {/* Body info */}
       <div className="cmp-card-body">
         <h3 className="cmp-card-name">{item.name}</h3>
 
@@ -111,7 +107,7 @@ function DishCard({ item, onClick }) {
         )}
 
         <p className="cmp-card-desc">
-          {item.description || 'Món ăn đặc sản, thơm ngon, đậm đà phong vị Việt.'}
+          {item.description || 'Món ăn đặc sản thơm ngon, đậm đà phong vị ẩm thực truyền thống Việt Nam.'}
         </p>
 
         <div className="cmp-card-footer">
@@ -122,7 +118,7 @@ function DishCard({ item, onClick }) {
             className="cmp-card-detail-btn"
             onClick={(e) => { e.stopPropagation(); onClick() }}
           >
-            Xem chi tiết
+            Chi tiết
           </button>
         </div>
       </div>
@@ -131,7 +127,7 @@ function DishCard({ item, onClick }) {
 }
 
 /* ═══════════════════════════════════════
-   MAIN PAGE
+   MAIN MENU PAGE
 ═══════════════════════════════════════ */
 export default function CustomerMenuPage() {
   const navigate = useNavigate()
@@ -163,7 +159,7 @@ export default function CustomerMenuPage() {
     })()
   }, [])
 
-  /* ── Lọc & sắp xếp ── */
+  /* ── Filter & Sort ── */
   const processedItems = (() => {
     let list = [...menuItems]
 
@@ -202,14 +198,21 @@ export default function CustomerMenuPage() {
       {/* ── TOP NAV ── */}
       <nav className="cmp-nav">
         <Link to="/customer" className="cmp-nav-brand">
-          <div className="cmp-nav-brand-icon">HS</div>
-          <span className="cmp-nav-brand-name">Hoa Sen</span>
+          <div className="cmp-nav-brand-icon">
+            <LotusLogo size={32} />
+          </div>
+          <div className="cmp-nav-brand-text">
+            <span className="cmp-nav-brand-name">Hoa Sen</span>
+            <small className="cmp-nav-brand-sub">Ẩm Thực Hà Thành · Tây Hồ</small>
+          </div>
         </Link>
 
         <div className="cmp-nav-links">
           <Link to="/customer" className="cmp-nav-link">Trang chủ</Link>
           <Link to="/customer#about" className="cmp-nav-link">Giới thiệu</Link>
-          <Link to="/customer#reservation" className="cmp-nav-btn">Đặt bàn ngay</Link>
+          <Link to="/customer#reservation" className="cmp-nav-btn">
+            🌸 Đặt bàn ngay
+          </Link>
         </div>
       </nav>
 
@@ -218,28 +221,28 @@ export default function CustomerMenuPage() {
         <div className="cmp-hero-inner">
           <div className="cmp-hero-text">
             <div className="cmp-hero-eyebrow">
-              Thực Đơn Nhà Hàng Hoa Sen
+              Thực Đơn Nhà Hàng Hoa Sen · Mỹ Vị Hà Thành
             </div>
             <h1>
-              Tinh Hoa <em>Ẩm Thực</em><br />Việt Nam
+              Tinh Hoa Ẩm Thực<br /><em>Hà Thành</em>
             </h1>
             <p className="cmp-hero-sub">
-              Hương vị truyền thống, nguyên liệu thượng hạng, trải nghiệm đẳng cấp
+              Hương vị Tràng An thanh nhã hòa quyện cùng nguyên liệu tinh tuyển từ đầm sen Tây Hồ
             </p>
             <div className="cmp-hero-tags">
-              <span className="cmp-hero-tag">Nguyên liệu tươi sạch</span>
-              <span className="cmp-hero-tag">Bếp trưởng thượng hạng</span>
-              <span className="cmp-hero-tag">10:00 – 22:30 hằng ngày</span>
+              <span className="cmp-hero-tag">🌱 Nguyên liệu tươi lành</span>
+              <span className="cmp-hero-tag">👨‍🍳 Nghệ nhân ẩm thực Hà Nội</span>
+              <span className="cmp-hero-tag">🕒 09:30 – 22:30 hàng ngày</span>
             </div>
           </div>
 
           {/* Stats cards */}
           <div className="cmp-hero-stats">
             {[
-              { num: menuItems.length || '—', label: 'Món ăn đang phục vụ' },
+              { num: menuItems.length || '—', label: 'Món ăn sẵn sàng' },
               { num: categories.length || '—', label: 'Danh mục ẩm thực' },
-              { num: '14+', label: 'Năm kinh nghiệm' },
-              { num: '4.9', label: 'Đánh giá khách hàng' },
+              { num: '12+', label: 'Năm đồng hành' },
+              { num: '4.9 ★', label: 'Đánh giá món ăn' },
             ].map((s) => (
               <div className="cmp-hero-stat" key={s.label}>
                 <span className="cmp-hero-stat-num">{s.num}</span>
@@ -287,7 +290,7 @@ export default function CustomerMenuPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Tìm theo tên món, nguyên liệu đặc trưng..."
+                  placeholder="Tìm món ăn, nguyên liệu, hương vị..."
                   value={searchKw}
                   onChange={(e) => setSearchKw(e.target.value)}
                 />
@@ -345,17 +348,17 @@ export default function CustomerMenuPage() {
             {loading ? (
               <div className="cmp-loading">
                 <div className="cmp-spinner" />
-                <p style={{ color: 'var(--rose-light)', margin: 0 }}>Đang chuẩn bị thực đơn...</p>
+                <p style={{ color: 'var(--lotus-light)', margin: 0, fontWeight: 500 }}>Đang chuẩn bị thực đơn Hoa Sen...</p>
               </div>
             ) : processedItems.length === 0 ? (
               <div className="cmp-empty">
                 <div className="cmp-empty-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--rose-light)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 11h.01"/><path d="M11 15h.01"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><circle cx="12" cy="12" r="10"/></svg>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--lotus-light)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </div>
                 <h3>Không tìm thấy món ăn phù hợp</h3>
                 <p>
                   {searchKw
-                    ? `Không có món nào khớp với "${searchKw}". Hãy thử từ khóa khác!`
+                    ? `Không có món nào khớp với "${searchKw}". Quý khách hãy thử từ khóa khác!`
                     : 'Danh mục này hiện chưa có món ăn nào.'}
                 </p>
                 {(searchKw || selectedCat !== 'ALL') && (
@@ -394,9 +397,10 @@ export default function CustomerMenuPage() {
 
       {/* ── FOOTER ── */}
       <footer className="cmp-footer">
-        <p>© 2026 <Link to="/customer">Nhà hàng Hoa Sen</Link>. Tất cả quyền được bảo lưu.</p>
-        <p>Trung tâm TP. Hồ Chí Minh &nbsp;·&nbsp; (028) 3822 1234 &nbsp;·&nbsp; 10:00 – 22:30</p>
+        <p>© 2026 <Link to="/customer">Nhà Hàng Hoa Sen Hà Nội</Link>. Tất cả quyền được bảo lưu.</p>
+        <p>Số 68 Phố Quảng Bá, Q. Tây Hồ, Hà Nội &nbsp;·&nbsp; Hotline: (024) 3719 8899 &nbsp;·&nbsp; 09:30 – 22:30</p>
       </footer>
+
       <CustomerChatBox />
     </div>
   )

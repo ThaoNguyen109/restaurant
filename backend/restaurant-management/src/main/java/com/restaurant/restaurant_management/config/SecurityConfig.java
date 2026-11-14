@@ -62,6 +62,7 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/email/**").permitAll()
                 .requestMatchers("/api/payment/**").permitAll()
+                .requestMatchers("/api/chat", "/api/chat/**").permitAll()
 
                 // Khách hàng xem menu, category, combo (chỉ GET)
                 .requestMatchers(HttpMethod.GET,
