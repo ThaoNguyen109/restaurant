@@ -38,7 +38,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://192.168.*:*",
+                "http://10.*:*",
+                "http://172.*:*"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -73,6 +79,38 @@ public class SecurityConfig {
                 // Khách hàng xem bàn (GET) và đặt bàn (POST)
                 .requestMatchers(HttpMethod.GET, "/api/tables", "/api/tables/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/reservations", "/api/reservations/**").permitAll()
+
+                // Khách hàng quét mã QR gọi món và xem tiến độ món của bàn (không cần login)
+                .requestMatchers(HttpMethod.POST, "/api/orders/customer").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/orders/customer/**").permitAll()
+
+                // Khách hàng & nhân viên tra cứu & tính toán khuyến mãi
+                .requestMatchers(HttpMethod.GET, "/api/promotions").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/promotions/calculate").permitAll()
+
+                // ── Customers ────────────────────────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/customers", "/api/customers/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "RECEPTIONIST", "CASHIER")
+                .requestMatchers(HttpMethod.POST, "/api/customers", "/api/customers/*/points")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "RECEPTIONIST", "CASHIER")
+                .requestMatchers(HttpMethod.PUT, "/api/customers/**")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
+                        .hasAnyRole("ADMIN", "MANAGER")
+
+                // ── Promotions: ADMIN + MANAGER ───────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/promotions/all", "/api/promotions/{id}")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/promotions")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/promotions/**")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.PATCH, "/api/promotions/**")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/promotions/**")
+                        .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers("/api/promotions/order/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "WAITER", "STAFF", "CASHIER")
 
                 // ── Menu-items: ADMIN + MANAGER ───────────────────────
                 .requestMatchers(HttpMethod.POST, "/api/menu-items/**")

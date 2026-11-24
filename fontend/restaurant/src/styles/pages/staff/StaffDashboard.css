@@ -1199,6 +1199,37 @@
   min-height: 2.2em;
 }
 
+/* Danh sách món trong combo - StaffDashboard */
+.combo-items-list {
+  list-style: none;
+  margin: 4px 0 6px 0;
+  padding: 5px 10px;
+  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.combo-items-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #166534;
+}
+
+.combo-items-qty {
+  font-weight: 700;
+  color: #15803d;
+  min-width: 20px;
+}
+
+.combo-items-name {
+  color: #166534;
+}
+
 .dish-bottom-row {
   display: flex;
   align-items: center;
@@ -2111,4 +2142,175 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ================================================================
+   COMBO PREVIEW & MODAL CHI TIẾT COMBO (PHỤC VỤ)
+   ================================================================ */
+.combo-card-preview-btn {
+  margin: 4px 0 8px 0;
+  display: inline-flex;
+}
+
+.combo-card-preview-btn span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px dashed #86efac;
+  padding: 2px 7px;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.pos-dish-card:hover .combo-card-preview-btn span {
+  background: #dcfce7;
+  color: #14532d;
+  border-color: #22c55e;
+}
+
+/* Modal Chi tiết Combo cho Phục vụ */
+.staff-combo-modal {
+  max-width: 520px;
+  border-radius: 16px;
+  padding: 20px;
+  gap: 14px;
+}
+
+.staff-combo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.staff-combo-img-wrap {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.staff-combo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.staff-combo-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.staff-combo-price-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.staff-combo-price-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.staff-combo-desc-box {
+  font-size: 0.84rem;
+  color: #334155;
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+.staff-combo-items-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.staff-combo-section-title {
+  margin: 0 0 10px 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.staff-combo-items-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.staff-combo-item-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.staff-combo-item-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.staff-combo-item-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: #f1f5f9;
+}
+
+.staff-combo-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.staff-combo-item-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.staff-combo-item-qty {
+  font-size: 0.78rem;
+  color: #15803d;
+}
+
+.staff-combo-item-qty strong {
+  font-weight: 800;
+  color: #166534;
+}
+
+.staff-combo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.modal-btn.secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.modal-btn.secondary:hover {
+  background: #e2e8f0;
 }

@@ -7,6 +7,7 @@ import {
   updateOrderItemStatus,
 } from '../../services/orderService'
 import { getAllMenuItems, updateMenuItemStatus } from '../../services/menuItemService'
+import { getAllCombos } from '../../services/comboService'
 import { getImageFullUrl } from '../../services/apiClient'
 import { subscribeWebSocket } from '../../services/websocketService'
 import { playKitchenAlert } from '../../utils/soundNotification'
@@ -24,15 +25,16 @@ function KitchenPage() {
   const [activeTab, setActiveTab] = useState('kds') // 'kds' | 'stock'
   const [orders, setOrders] = useState([])
   const [menuItems, setMenuItems] = useState([])
+  const [combos, setCombos] = useState([])
   const [loading, setLoading] = useState(true)
   const [stockSearch, setStockSearch] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('vi-VN'))
   const [toast, setToast] = useState(null)
 
   const role = getRole()?.toUpperCase()
-  const canAccessStaff   = ['ADMIN', 'MANAGER', 'WAITER', 'STAFF'].includes(role)
+  const canAccessStaff = ['ADMIN', 'MANAGER', 'WAITER', 'STAFF'].includes(role)
   const canAccessCashier = ['ADMIN', 'MANAGER', 'CASHIER'].includes(role)
-  const canAccessAdmin   = ['ADMIN'].includes(role)
+  const canAccessAdmin = ['ADMIN'].includes(role)
 
   const showToast = (message) => {
     setToast(message)
@@ -65,12 +67,28 @@ function KitchenPage() {
   // ── Fetch Menu Items for Stock Out ────────────────────────────────
   const fetchMenuItems = useCallback(async () => {
     try {
-      const data = await getAllMenuItems()
-      setMenuItems(data || [])
+      const [itemsData, combosData] = await Promise.all([
+        getAllMenuItems().catch(() => []),
+        getAllCombos().catch(() => [])
+      ])
+      setMenuItems(itemsData || [])
+      setCombos(combosData || [])
     } catch (err) {
-      console.error('KDS load menu error', err)
+      console.error('KDS load menu & combos error', err)
     }
   }, [])
+
+  // Helper tìm danh sách món trong combo
+  const getComboItems = useCallback((item) => {
+    if (item.comboItems && item.comboItems.length > 0) {
+      return item.comboItems
+    }
+    const target = combos.find(c => 
+      (item.comboId && c.id === item.comboId) ||
+      (c.name && item.itemName && c.name.trim().toLowerCase() === item.itemName.trim().toLowerCase())
+    )
+    return target?.items || []
+  }, [combos])
 
   useEffect(() => {
     fetchOrders()
@@ -211,10 +229,10 @@ function KitchenPage() {
             Làm mới
           </button>
           <div className="kds-role-links">
-            {canAccessStaff   && <a href="/staff"              className="kds-role-link">Phục vụ</a>}
-            {canAccessStaff   && <a href="/staff/reservations" className="kds-role-link">Đặt bàn</a>}
-            {canAccessCashier && <a href="/cashier"            className="kds-role-link">Thu ngân</a>}
-            {canAccessAdmin   && <a href="/admin/orders"       className="kds-role-link">Quản trị</a>}
+            {canAccessStaff && <a href="/staff" className="kds-role-link">Phục vụ</a>}
+            {canAccessStaff && <a href="/staff/reservations" className="kds-role-link">Đặt bàn</a>}
+            {canAccessCashier && <a href="/cashier" className="kds-role-link">Thu ngân</a>}
+            {canAccessAdmin && <a href="/admin/orders" className="kds-role-link">Quản trị</a>}
           </div>
         </div>
       </header>
@@ -287,19 +305,52 @@ function KitchenPage() {
                         )}
 
                         <div className="kds-items-list">
-                          {(order.items || []).map(item => (
-                            <div key={item.id} className={`kds-item-row ${item.status}`}>
-                              <div className="kds-item-main">
-                                <div className="kds-item-info">
-                                  <span className="kds-item-qty">{item.quantity}x</span>
-                                  <div className="kds-item-text">
-                                    <span className="kds-item-name">{item.itemName}</span>
-                                    {item.note && (
-                                      <span className="kds-item-note">Ghi chú: {item.note}</span>
-                                    )}
+                          {(order.items || []).map(item => {
+                            const comboItems = getComboItems(item)
+                            const isCombo = item.itemType === 'COMBO' || Boolean(item.comboId) || comboItems.length > 0
+
+                            return (
+                              <div key={item.id} className={`kds-item-row ${item.status}`}>
+                                <div className="kds-item-main">
+                                  <div className="kds-item-info">
+                                    <span className="kds-item-qty">{item.quantity}x</span>
+                                    <div className="kds-item-text">
+                                      <span className="kds-item-name">
+                                        {item.itemName}
+                                        {isCombo && (
+                                          <span className="kds-combo-badge">COMBO</span>
+                                        )}
+                                      </span>
+
+                                      {/* Hiển thị luôn danh sách món trong combo cho bếp */}
+                                      {isCombo && comboItems.length > 0 && (
+                                        <div className="kds-combo-box">
+                                          <div className="kds-combo-box-title">
+                                            <span>Món gồm có:</span>
+                                          </div>
+                                          <ul className="kds-combo-items">
+                                            {comboItems.map((ci, idx) => {
+                                              const totalQty = (ci.quantity || 1) * (item.quantity || 1)
+                                              return (
+                                                <li key={idx} className="kds-combo-item">
+                                                  <span className="kds-combo-item-qty">{totalQty}x</span>
+                                                  <span className="kds-combo-item-name">{ci.menuItemName}</span>
+                                                  {item.quantity > 1 && (
+                                                    <span className="kds-combo-item-hint">({ci.quantity}x/suất)</span>
+                                                  )}
+                                                </li>
+                                              )
+                                            })}
+                                          </ul>
+                                        </div>
+                                      )}
+
+                                      {item.note && (
+                                        <span className="kds-item-note">Ghi chú: {item.note}</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
                               {/* Item Action Buttons */}
                               {item.status === 'PENDING' && (
@@ -325,8 +376,9 @@ function KitchenPage() {
                                   Đã lên món
                                 </div>
                               )}
-                            </div>
-                          ))}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
 

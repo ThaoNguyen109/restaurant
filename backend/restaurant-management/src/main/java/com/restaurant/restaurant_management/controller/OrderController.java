@@ -30,17 +30,37 @@ public class OrderController {
     }
 
     /**
+     * POST /api/orders/customer
+     * Khách hàng quét mã QR gọi món trực tiếp (công khai, không cần đăng nhập nhân viên)
+     */
+    @PostMapping("/customer")
+    public ResponseEntity<OrderResponse> createCustomerOrder(@Valid @RequestBody CreateOrderRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createCustomerOrder(request));
+    }
+
+    /**
+     * GET /api/orders/customer/table/{tableId}
+     * Khách hàng xem danh sách đơn/món đang hoạt động của bàn mình
+     */
+    @GetMapping("/customer/table/{tableId}")
+    public ResponseEntity<List<OrderResponse>> getCustomerActiveOrdersByTable(@PathVariable Long tableId) {
+        return ResponseEntity.ok(orderService.getActiveOrdersByTable(tableId));
+    }
+
+    /**
      * GET /api/orders
-     * Lấy danh sách đơn hàng (hỗ trợ lọc theo status, date, search, tableId)
+     * Lấy danh sách đơn hàng (hỗ trợ lọc theo status, date, startDate, endDate, search, tableId)
      */
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getOrders(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String date,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long tableId
     ) {
-        return ResponseEntity.ok(orderService.getAllOrders(status, date, search, tableId));
+        return ResponseEntity.ok(orderService.getAllOrders(status, date, startDate, endDate, search, tableId));
     }
 
     /**

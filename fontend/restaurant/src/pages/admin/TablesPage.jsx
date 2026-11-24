@@ -50,6 +50,14 @@ export default function TablesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting]         = useState(false)
 
+  // QR Code Modal
+  const [qrTable, setQrTable]           = useState(null)
+  const [qrServerIp, setQrServerIp]     = useState(
+    typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? '192.168.1.227'
+      : (typeof window !== 'undefined' ? window.location.hostname : 'localhost')
+  )
+
   // ── Load data ──────────────────────────────────────────────────
   const loadTables = useCallback(async () => {
     try {
@@ -205,7 +213,7 @@ export default function TablesPage() {
     >
       <div className="tables-admin-page">
         {/* ── 1. METRIC CARDS ────────────────────────────────────── */}
-        <div className="tbl-metrics-grid">
+        <div className="tbl-metrics-grid" style={{ marginBottom: 16 }}>
           <div
             className={`tbl-metric-card${filterStatus === 'ALL' ? ' active' : ''}`}
             onClick={() => setFilterStatus('ALL')}
@@ -267,53 +275,69 @@ export default function TablesPage() {
           </div>
         </div>
 
-        {/* ── 2. TOOLBAR & STATUS TABS ───────────────────────────── */}
-        <div className="tbl-control-panel">
-          {/* Status Tabs */}
-          <div className="tbl-status-tabs">
+        {/* ── 2. STATUS TABS (Hàng trạng thái bàn) ──────────────── */}
+        <div style={{ marginBottom: 12 }}>
+          <div className="admin-tabs">
             {STATUS_OPTIONS.map(opt => {
               const count = opt.value === 'ALL'
                 ? stats.all
                 : tables.filter(t => t.status === opt.value).length
               const isActive = filterStatus === opt.value
+              let countCls = ''
+              if (opt.value === 'AVAILABLE') countCls = ' success'
+              else if (opt.value === 'OCCUPIED') countCls = ' info'
+              else if (opt.value === 'RESERVED') countCls = ' warning'
+              else if (opt.value === 'MAINTENANCE') countCls = ' danger'
+
               return (
                 <button
                   key={opt.value}
                   type="button"
-                  className={`tbl-tab-btn${isActive ? ' active' : ''}`}
+                  className={`admin-tab-item${isActive ? ' active' : ''}`}
                   onClick={() => setFilterStatus(opt.value)}
                 >
                   <span>{opt.label}</span>
-                  <span className="tbl-tab-count">{count}</span>
+                  <span className={`admin-tab-count${countCls}`}>{count}</span>
                 </button>
               )
             })}
           </div>
+        </div>
 
-          {/* Search & View Toggle */}
-          <div className="tbl-filter-row">
-            <div className="tbl-search-box">
-              <input
-                type="text"
-                placeholder="Tìm kiếm số bàn (vd: 1, 10) hoặc trạng thái..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className="tbl-search-clear"
-                  onClick={() => setSearch('')}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <div className="tbl-view-toggle">
+        {/* ── 2. SEARCH & CONTROLS TOOLBAR (Thanh tìm kiếm bên trái dài & đẹp) ── */}
+        <div className="admin-toolbar" style={{ alignItems: 'center', marginBottom: 16 }}>
+          {/* Thanh tìm kiếm bên trái dài và đẹp */}
+          <div className="admin-search-bar" style={{ minWidth: 320, flex: 1 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="admin-search-icon">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="admin-search-input"
+              placeholder="Tìm kiếm số bàn (vd: 1, 10)..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
               <button
                 type="button"
-                className={`tbl-view-btn${viewMode === 'grid' ? ' active' : ''}`}
+                className="admin-search-clear"
+                onClick={() => setSearch('')}
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Right Controls: View Toggle & Reset */}
+          <div className="admin-toolbar-right">
+            {/* View Mode Toggle */}
+            <div className="admin-segmented-group" style={{ height: 42, borderRadius: 12 }}>
+              <button
+                type="button"
+                className={`admin-segmented-btn${viewMode === 'grid' ? ' active' : ''}`}
                 onClick={() => setViewMode('grid')}
                 title="Xem dạng thẻ sơ đồ"
               >
@@ -321,7 +345,7 @@ export default function TablesPage() {
               </button>
               <button
                 type="button"
-                className={`tbl-view-btn${viewMode === 'table' ? ' active' : ''}`}
+                className={`admin-segmented-btn${viewMode === 'table' ? ' active' : ''}`}
                 onClick={() => setViewMode('table')}
                 title="Xem dạng danh sách bảng"
               >
@@ -329,13 +353,15 @@ export default function TablesPage() {
               </button>
             </div>
 
+            {/* Clear Filters Button */}
             {(search || filterStatus !== 'ALL') && (
               <button
                 type="button"
-                className="tbl-btn-reset"
+                className="admin-btn-reset"
+                style={{ height: 42, borderRadius: 12 }}
                 onClick={() => { setSearch(''); setFilterStatus('ALL') }}
               >
-                Xóa bộ lọc
+                ✕ Xóa lọc
               </button>
             )}
           </div>
@@ -397,6 +423,15 @@ export default function TablesPage() {
                   <div className="tbl-card-foot">
                     <button
                       type="button"
+                      className="tbl-act-btn qr"
+                      onClick={() => setQrTable(table)}
+                      title="Xem mã QR gọi món"
+                      style={{ background: '#fdf2f8', color: '#be185d', borderColor: '#fbcfe8' }}
+                    >
+                      📱 QR
+                    </button>
+                    <button
+                      type="button"
                       className="tbl-act-btn edit"
                       onClick={() => openEditForm(table)}
                     >
@@ -433,7 +468,13 @@ export default function TablesPage() {
                 {filteredTables.map(table => {
                   const st = STATUS_MAP[table.status] || STATUS_MAP.AVAILABLE
                   return (
-                    <tr key={table.id}>
+                    <tr
+                      key={table.id}
+                      className="clickable-row"
+                      onClick={() => openEditForm(table)}
+                      style={{ cursor: 'pointer' }}
+                      title="Bấm để xem chi tiết và chỉnh sửa bàn"
+                    >
                       <td>
                         <span className="tbl-num-tag">Bàn {table.tableNumber}</span>
                       </td>
@@ -449,6 +490,7 @@ export default function TablesPage() {
                         <select
                           className="tbl-quick-select"
                           value={table.status}
+                          onClick={e => e.stopPropagation()}
                           onChange={e => handleQuickStatus(table.id, e.target.value, table.tableNumber)}
                         >
                           <option value="AVAILABLE">Trống</option>
@@ -462,15 +504,33 @@ export default function TablesPage() {
                         <div className="tbl-actions-cell">
                           <button
                             type="button"
+                            className="tbl-act-btn qr"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setQrTable(table)
+                            }}
+                            title="Xem mã QR gọi món"
+                            style={{ background: '#fdf2f8', color: '#be185d', borderColor: '#fbcfe8' }}
+                          >
+                            QR
+                          </button>
+                          <button
+                            type="button"
                             className="tbl-act-btn edit"
-                            onClick={() => openEditForm(table)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openEditForm(table)
+                            }}
                           >
                             Sửa
                           </button>
                           <button
                             type="button"
                             className="tbl-act-btn delete"
-                            onClick={() => openDeleteConfirm(table)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openDeleteConfirm(table)
+                            }}
                           >
                             Xóa
                           </button>
@@ -593,6 +653,169 @@ export default function TablesPage() {
             </div>
           </div>
         )}
+
+        {/* ── MODAL: MÃ QR GỌI MÓN CỦA BÀN ────────────────────────── */}
+        {qrTable && (() => {
+          const currentPort = window.location.port ? `:${window.location.port}` : ''
+          const currentProtocol = window.location.protocol || 'http:'
+          const baseUrl = `${currentProtocol}//${qrServerIp.trim() || 'localhost'}${currentPort}`
+          const qrUrl = `${baseUrl}/order?tableId=${qrTable.id}&tableNumber=${qrTable.tableNumber}`
+          const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}`
+
+          return (
+            <div className="tbl-modal-overlay" onClick={() => setQrTable(null)}>
+              <div className="tbl-modal-dialog" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+                <div className="tbl-modal-header">
+                  <h2>Mã QR Gọi Món - Bàn {qrTable.tableNumber}</h2>
+                  <button type="button" className="tbl-modal-close" onClick={() => setQrTable(null)}>✕</button>
+                </div>
+                <div className="tbl-modal-body" style={{ textAlign: 'center' }}>
+                  <div style={{
+                    border: '2px solid #fbcfe8',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    background: '#fff',
+                    boxShadow: '0 4px 12px rgba(216, 104, 136, 0.08)',
+                    marginBottom: '16px',
+                  }}>
+                    <h3 style={{ margin: '0 0 4px 0', color: '#b84d6e', fontSize: '18px', fontWeight: 'bold' }}>
+                      NHÀ HÀNG HOA SEN
+                    </h3>
+                    <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: '12px' }}>
+                      Quét mã bằng camera điện thoại để gọi món tại bàn
+                    </p>
+                    <img
+                      src={qrImgUrl}
+                      alt={`QR Code Bàn ${qrTable.tableNumber}`}
+                      style={{ width: '200px', height: '200px', display: 'block', margin: '0 auto' }}
+                    />
+                    <div style={{
+                      marginTop: '14px',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: '#2d6a4f',
+                      background: '#d8f3dc',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      display: 'inline-block',
+                    }}>
+                      BÀN SỐ {qrTable.tableNumber}
+                    </div>
+                  </div>
+
+                  {/* Cấu hình IP cho điện thoại */}
+                  <div style={{ textAlign: 'left', marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>
+                        🌐 Host / IP cho điện thoại quét:
+                      </label>
+                      <button
+                        type="button"
+                        style={{ border: 'none', background: 'transparent', color: '#be185d', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={() => setQrServerIp('192.168.1.227')}
+                      >
+                        Dùng IP máy (192.168.1.227)
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={qrServerIp}
+                      onChange={e => setQrServerIp(e.target.value)}
+                      placeholder="Nhập IP LAN máy tính (VD: 192.168.1.227)"
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    <small style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                      Điện thoại cùng Wi-Fi sẽ truy cập link theo IP này.
+                    </small>
+                  </div>
+
+                  <div style={{ textAlign: 'left', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      Link gọi món:
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={qrUrl}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          fontSize: '12px',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          background: '#f8fafc',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="tbl-btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(qrUrl)
+                          showToast('Đã sao chép liên kết gọi món!', 'success')
+                        }}
+                      >
+                        Sao chép
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="tbl-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    className="tbl-btn-secondary"
+                    onClick={() => window.open(qrUrl, '_blank')}
+                  >
+                    ↗ Mở thử nghiệm
+                  </button>
+                  <button
+                    type="button"
+                    className="tbl-btn-primary"
+                    style={{ background: 'linear-gradient(135deg, #d86888, #b84d6e)' }}
+                    onClick={() => {
+                      const printWin = window.open('', '_blank')
+                      printWin.document.write(`
+                        <html>
+                          <head>
+                            <title>Mã QR Bàn ${qrTable.tableNumber} - Hoa Sen</title>
+                            <style>
+                              body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+                              .card { border: 2px solid #d86888; border-radius: 16px; padding: 24px; text-align: center; width: 260px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                              h2 { margin: 0 0 6px 0; color: #b84d6e; font-size: 20px; }
+                              p { margin: 0 0 16px 0; color: #64748b; font-size: 13px; }
+                              img { width: 200px; height: 200px; }
+                              .table-num { margin-top: 14px; font-size: 22px; font-weight: bold; color: #2d6a4f; }
+                            </style>
+                          </head>
+                          <body onload="window.print(); window.close();">
+                            <div class="card">
+                              <h2>NHÀ HÀNG HOA SEN</h2>
+                              <p>Quét mã để gọi món tại bàn</p>
+                              <img src="${qrImgUrl}" />
+                              <div class="table-num">BÀN SỐ ${qrTable.tableNumber}</div>
+                            </div>
+                          </body>
+                        </html>
+                      `)
+                      printWin.document.close()
+                    }}
+                  >
+                    🖨️ In mã dán bàn
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── 6. TOAST NOTIFICATIONS ─────────────────────────────── */}
         {toast && (

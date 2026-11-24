@@ -43,12 +43,23 @@ export default function CustomerChatBox() {
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
 
+  // Vị trí bong bóng chat (kéo thả tự do như Messenger)
+  const [bubblePos, setBubblePos] = useState({ x: null, y: null })
+  const dragRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialX: 0,
+    initialY: 0,
+    hasMoved: false,
+  })
+
   // Danh sách tin nhắn khởi tạo
   const [messages, setMessages] = useState([
     {
       id: 'welcome-1',
       sender: 'bot',
-      text: 'Kính chào quý khách! Em là Trợ lý Hoa Sen 🌸 được tích hợp trí tuệ nhân tạo. Em rất sẵn lòng hỗ trợ quý khách tư vấn món ngon, giải đáp về thực đơn hoặc hướng dẫn đặt bàn ạ!',
+      text: 'Kính chào quý khách! Em là Trợ lý Hoa Sen được tích hợp trí tuệ nhân tạo. Em rất sẵn lòng hỗ trợ quý khách tư vấn món ngon, chương trình khuyến mãi & voucher, hoặc hướng dẫn đặt bàn ạ! 🌸',
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     },
   ])
@@ -91,12 +102,91 @@ export default function CustomerChatBox() {
     setIsOpen(false)
   }
 
+  // ── Xử lý kéo thả bong bóng chat (Touch trên điện thoại & Mouse trên Desktop) ──
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0]
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    dragRef.current = {
+      isDragging: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      initialX: rect.left,
+      initialY: rect.top,
+      hasMoved: false,
+    }
+  }
+
+  const handleTouchMove = (e) => {
+    if (!dragRef.current.isDragging) return
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - dragRef.current.startX
+    const deltaY = touch.clientY - dragRef.current.startY
+
+    if (Math.hypot(deltaX, deltaY) > 5) {
+      dragRef.current.hasMoved = true
+    }
+
+    if (dragRef.current.hasMoved) {
+      if (e.cancelable) e.preventDefault()
+      const newX = Math.min(Math.max(10, dragRef.current.initialX + deltaX), window.innerWidth - 65)
+      const newY = Math.min(Math.max(10, dragRef.current.initialY + deltaY), window.innerHeight - 65)
+      setBubblePos({ x: newX, y: newY })
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (!dragRef.current.hasMoved) {
+      handleOpenChat()
+    }
+    dragRef.current.isDragging = false
+  }
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    dragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: rect.left,
+      initialY: rect.top,
+      hasMoved: false,
+    }
+
+    const onMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - dragRef.current.startX
+      const deltaY = moveEvent.clientY - dragRef.current.startY
+      if (Math.hypot(deltaX, deltaY) > 5) {
+        dragRef.current.hasMoved = true
+      }
+      if (dragRef.current.hasMoved) {
+        const newX = Math.min(Math.max(10, dragRef.current.initialX + deltaX), window.innerWidth - 65)
+        const newY = Math.min(Math.max(10, dragRef.current.initialY + deltaY), window.innerHeight - 65)
+        setBubblePos({ x: newX, y: newY })
+      }
+    }
+
+    const onMouseUp = () => {
+      if (!dragRef.current.hasMoved) {
+        handleOpenChat()
+      }
+      dragRef.current.isDragging = false
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
   // Quick replies
   const quickPrompts = [
+    { label: '🏷️ Khuyến mãi & Voucher', query: 'Nhà hàng hiện đang có những chương trình khuyến mãi, ưu đãi và mã voucher nào?' },
     { label: '🍽️ Món ăn đặc sắc', query: 'Gợi ý cho tôi các món ăn đặc sắc và nổi bật nhất của nhà hàng Hoa Sen' },
     { label: '📅 Cách đặt bàn', query: 'Tôi muốn hướng dẫn đặt bàn trước' },
     { label: '🕒 Giờ mở cửa & Địa chỉ', query: 'Nhà hàng mở cửa lúc mấy giờ và ở đâu?' },
-    { label: '🎁 Ưu đãi hôm nay', query: 'Nhà hàng hiện có những ưu đãi và combo hấp dẫn nào?' },
     { label: '🥗 Món thanh đạm / Chay', query: 'Nhà hàng có các món thanh đạm hoặc món chay nào không?' },
   ]
 
@@ -180,12 +270,20 @@ export default function CustomerChatBox() {
   }
 
   return (
-    <aside className="ccb-container" aria-label="Khung chat hỗ trợ khách hàng">
+    <aside
+      className={`ccb-container ${bubblePos.x !== null ? 'has-custom-pos' : ''}`}
+      style={
+        bubblePos.x !== null && !isOpen
+          ? { left: `${bubblePos.x}px`, top: `${bubblePos.y}px`, bottom: 'auto', right: 'auto' }
+          : undefined
+      }
+      aria-label="Khung chat hỗ trợ khách hàng"
+    >
       {/* ── BONG BÓNG GỢI Ý CHÀO MỪNG (DESKTOP) ── */}
       {!isOpen && showTooltip && (
         <div className="ccb-welcome-bubble" onClick={handleOpenChat}>
           <div className="ccb-welcome-bubble-text">
-            <strong>Trợ lý Hoa Sen 🌸</strong>
+            <strong>Trợ lý Hoa Sen</strong>
             <span>Em có thể giúp gì cho quý khách hôm nay ạ?</span>
           </div>
           <button
@@ -201,12 +299,15 @@ export default function CustomerChatBox() {
         </div>
       )}
 
-      {/* ── NÚT NỔI LAUNCHER ── */}
+      {/* ── NÚT NỔI LAUNCHER (KÉO THẢ DI CHUYỂN NHƯ MESSENGER) ── */}
       {!isOpen && (
         <button
           className="ccb-launcher-btn"
-          onClick={handleOpenChat}
-          title="Nhắn tin với Trợ lý AI Hoa Sen"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          title="Kéo thả để di chuyển · Nhấp để trò chuyện với AI"
           aria-label="Mở khung trò chuyện hỗ trợ"
         >
           <div className="ccb-launcher-icon">

@@ -129,16 +129,20 @@ function VNPayReturnPage() {
 
         {/* Actions */}
         <div className="vnpay-actions">
+          <Link to="/order" className="vnpay-btn vnpay-btn-primary">
+            Quay lại trang gọi món của bàn
+          </Link>
+          <Link to="/menu" className="vnpay-btn vnpay-btn-secondary">
+            Xem thực đơn
+          </Link>
           <button
             type="button"
-            className="vnpay-btn vnpay-btn-primary"
+            className="vnpay-btn vnpay-btn-secondary"
             onClick={() => navigate('/cashier', { state: { completedOrderId: result?.orderId } })}
+            style={{ fontSize: '0.85rem', color: '#64748b' }}
           >
-            💳 Về màn hình Thu ngân & In hóa đơn
+            Màn hình Thu ngân (Nhân viên)
           </button>
-          <Link to="/menu" className="vnpay-btn vnpay-btn-secondary">
-            📖 Về Thực đơn
-          </Link>
         </div>
       </div>
     </div>

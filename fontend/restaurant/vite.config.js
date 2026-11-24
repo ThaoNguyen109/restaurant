@@ -7,4 +7,8 @@ export default defineConfig({
   define: {
     global: 'window',
   },
+  server: {
+    host: true, // Lắng nghe trên mọi card mạng (0.0.0.0) để điện thoại cùng Wi-Fi truy cập được
+    port: 5173,
+  },
 })

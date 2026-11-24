@@ -1,7 +1,9 @@
 package com.restaurant.restaurant_management.repository;
 
 import com.restaurant.restaurant_management.entity.Order;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -10,6 +12,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    /** Lấy đơn hàng theo khách hàng phân trang/giới hạn */
+    @Query("SELECT o FROM Order o WHERE o.customerId = :customerId ORDER BY o.createdAt DESC")
+    List<Order> findByCustomerIdOrderByCreatedAtDesc(@Param("customerId") Long customerId, Pageable pageable);
+
+    /** Đếm đơn hàng theo khách hàng */
+    int countByCustomerId(Long customerId);
+
+    /** Xóa liên kết khách hàng trong orders khi khách bị xóa */
+    @Modifying
+    @Query("UPDATE Order o SET o.customerId = NULL WHERE o.customerId = :customerId")
+    void clearCustomerIdByCustomerId(@Param("customerId") Long customerId);
 
     /** Lấy tất cả sắp xếp theo thời gian tạo mới nhất */
     List<Order> findAllByOrderByCreatedAtDesc();

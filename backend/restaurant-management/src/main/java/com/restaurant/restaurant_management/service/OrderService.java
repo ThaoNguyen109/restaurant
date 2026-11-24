@@ -23,6 +23,7 @@ public class OrderService {
     private final RestaurantTableRepository restaurantTableRepository;
     private final MenuItemRepository menuItemRepository;
     private final ComboRepository comboRepository;
+    private final ComboItemRepository comboItemRepository;
     private final WebSocketEventService wsEventService;
 
     public OrderService(
@@ -31,6 +32,7 @@ public class OrderService {
             RestaurantTableRepository restaurantTableRepository,
             MenuItemRepository menuItemRepository,
             ComboRepository comboRepository,
+            ComboItemRepository comboItemRepository,
             WebSocketEventService wsEventService
     ) {
         this.orderRepository = orderRepository;
@@ -38,6 +40,7 @@ public class OrderService {
         this.restaurantTableRepository = restaurantTableRepository;
         this.menuItemRepository = menuItemRepository;
         this.comboRepository = comboRepository;
+        this.comboItemRepository = comboItemRepository;
         this.wsEventService = wsEventService;
     }
 
@@ -63,9 +66,29 @@ public class OrderService {
                     .image(m.getImage());
         } else if (item.getCombo() != null) {
             Combo c = item.getCombo();
+            // Lấy danh sách món trong combo để hiển thị cho bếp/phục vụ/khách hàng
+            List<ComboItemResponse> comboItemResponses = comboItemRepository.findByComboId(c.getId())
+                    .stream()
+                    .map(ci -> {
+                        ComboItemResponse cir = new ComboItemResponse();
+                        cir.setId(ci.getId());
+                        cir.setComboId(ci.getComboId());
+                        cir.setMenuItemId(ci.getMenuItemId());
+                        cir.setQuantity(ci.getQuantity());
+                        // Lấy tên món từ MenuItem
+                        menuItemRepository.findById(ci.getMenuItemId()).ifPresent(mi -> {
+                            cir.setMenuItemName(mi.getName());
+                            cir.setMenuItemPrice(mi.getPrice());
+                            cir.setMenuItemImage(mi.getImage());
+                        });
+                        return cir;
+                    })
+                    .collect(Collectors.toList());
+
             builder.comboId(c.getId())
                     .comboName(c.getName())
                     .comboImage(c.getImage())
+                    .comboItems(comboItemResponses)
                     .itemName(c.getName())
                     .itemType("COMBO")
                     .image(c.getImage());
@@ -88,6 +111,10 @@ public class OrderService {
                 .id(order.getId())
                 .status(order.getStatus())
                 .totalAmount(order.getTotalAmount())
+                .promotionId(order.getPromotionId())
+                .promotionCode(order.getPromotionCode())
+                .discountAmount(order.getDiscountAmount())
+                .finalAmount(order.getFinalAmount())
                 .note(order.getNote())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
@@ -118,24 +145,45 @@ public class OrderService {
     // ── Business Methods ──────────────────────────────────────────
 
     /**
-     * Lấy danh sách đơn hàng có bộ lọc (status, date yyyy-MM-dd, search, tableId)
+     * Lấy danh sách đơn hàng có bộ lọc (status, date yyyy-MM-dd, startDate, endDate, search, tableId)
      */
     @Transactional(readOnly = true)
-    public List<OrderResponse> getAllOrders(String status, String date, String search, Long tableId) {
-        LocalDateTime startDate = null;
-        LocalDateTime endDate = null;
+    public List<OrderResponse> getAllOrders(String status, String date, String startDateStr, String endDateStr, String search, Long tableId) {
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
 
-        if (date != null && !date.isBlank()) {
-            LocalDate localDate = LocalDate.parse(date.trim());
-            startDate = localDate.atStartOfDay();
-            endDate = localDate.atTime(LocalTime.MAX);
+        if (startDateStr != null && !startDateStr.isBlank()) {
+            try {
+                LocalDate sDate = LocalDate.parse(startDateStr.trim());
+                startDateTime = sDate.atStartOfDay();
+            } catch (Exception ignored) {}
+        }
+        if (endDateStr != null && !endDateStr.isBlank()) {
+            try {
+                LocalDate eDate = LocalDate.parse(endDateStr.trim());
+                endDateTime = eDate.atTime(LocalTime.MAX);
+            } catch (Exception ignored) {}
+        }
+
+        // Tương thích ngược với date đơn lẻ
+        if (startDateTime == null && endDateTime == null && date != null && !date.isBlank()) {
+            try {
+                LocalDate localDate = LocalDate.parse(date.trim());
+                startDateTime = localDate.atStartOfDay();
+                endDateTime = localDate.atTime(LocalTime.MAX);
+            } catch (Exception ignored) {}
         }
 
         String keyword = (search != null && !search.isBlank()) ? search.trim() : null;
         String filterStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) ? status.trim() : null;
 
-        List<Order> orders = orderRepository.filterOrders(filterStatus, tableId, startDate, endDate, keyword);
+        List<Order> orders = orderRepository.filterOrders(filterStatus, tableId, startDateTime, endDateTime, keyword);
         return orders.stream().map(this::toOrderResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders(String status, String date, String search, Long tableId) {
+        return getAllOrders(status, date, null, null, search, tableId);
     }
 
     /**
@@ -187,6 +235,46 @@ public class OrderService {
         wsEventService.sendTableEvent("TABLE_UPDATED", "Bàn " + table.getTableNumber() + " chuyển sang Có khách", toTableResponse(table));
 
         return resp;
+    }
+
+    /**
+     * Khách hàng quét mã QR gọi món:
+     * - Nếu bàn chưa có đơn mở -> Tạo mới (status PENDING, bàn OCCUPIED)
+     * - Nếu bàn đã có đơn đang mở -> Thêm món vào đơn hiện tại
+     */
+    @Transactional
+    public OrderResponse createCustomerOrder(CreateOrderRequest request) {
+        if (request.getTableId() == null) {
+            throw new RuntimeException("Vui lòng chọn bàn để gọi món");
+        }
+
+        List<Order> activeOrders = orderRepository.findActiveOrdersByTableId(request.getTableId());
+        if (!activeOrders.isEmpty()) {
+            Order existingOrder = activeOrders.get(0);
+            if (request.getItems() != null && !request.getItems().isEmpty()) {
+                for (OrderItemRequest itemReq : request.getItems()) {
+                    OrderItem item = buildOrderItemFromRequest(itemReq);
+                    existingOrder.addOrderItem(item);
+                }
+                recalculateTotal(existingOrder);
+                existingOrder.setUpdatedAt(LocalDateTime.now());
+                if (request.getNote() != null && !request.getNote().isBlank()) {
+                    String cur = existingOrder.getNote() != null && !existingOrder.getNote().isBlank()
+                            ? existingOrder.getNote() + " | " : "";
+                    existingOrder.setNote(cur + request.getNote().trim());
+                }
+                Order saved = orderRepository.save(existingOrder);
+                OrderResponse resp = toOrderResponse(saved);
+                String tableNum = existingOrder.getTable() != null ? String.valueOf(existingOrder.getTable().getTableNumber()) : "";
+                wsEventService.sendKitchenEvent("ITEM_ADDED", "Bàn " + tableNum + " vừa gọi thêm món qua QR", resp);
+                wsEventService.sendOrderEvent("ITEM_ADDED", "Bàn " + tableNum + " gọi thêm món qua QR", resp);
+                return resp;
+            }
+            return toOrderResponse(existingOrder);
+        }
+
+        // Bàn chưa có đơn mở -> tạo đơn mới
+        return createOrder(request);
     }
 
     /**

@@ -15,6 +15,10 @@ public class OrderResponse {
 
     private String status;
     private BigDecimal totalAmount;
+    private Long promotionId;
+    private String promotionCode;
+    private BigDecimal discountAmount;
+    private BigDecimal finalAmount;
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -94,6 +98,38 @@ public class OrderResponse {
         this.totalAmount = totalAmount;
     }
 
+    public Long getPromotionId() {
+        return promotionId;
+    }
+
+    public void setPromotionId(Long promotionId) {
+        this.promotionId = promotionId;
+    }
+
+    public String getPromotionCode() {
+        return promotionCode;
+    }
+
+    public void setPromotionCode(String promotionCode) {
+        this.promotionCode = promotionCode;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public BigDecimal getFinalAmount() {
+        return finalAmount;
+    }
+
+    public void setFinalAmount(BigDecimal finalAmount) {
+        this.finalAmount = finalAmount;
+    }
+
     public String getNote() {
         return note;
     }
@@ -141,6 +177,10 @@ public class OrderResponse {
         private Integer tableCapacity;
         private String status;
         private BigDecimal totalAmount;
+        private Long promotionId;
+        private String promotionCode;
+        private BigDecimal discountAmount;
+        private BigDecimal finalAmount;
         private String note;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -177,6 +217,26 @@ public class OrderResponse {
             return this;
         }
 
+        public OrderResponseBuilder promotionId(Long promotionId) {
+            this.promotionId = promotionId;
+            return this;
+        }
+
+        public OrderResponseBuilder promotionCode(String promotionCode) {
+            this.promotionCode = promotionCode;
+            return this;
+        }
+
+        public OrderResponseBuilder discountAmount(BigDecimal discountAmount) {
+            this.discountAmount = discountAmount;
+            return this;
+        }
+
+        public OrderResponseBuilder finalAmount(BigDecimal finalAmount) {
+            this.finalAmount = finalAmount;
+            return this;
+        }
+
         public OrderResponseBuilder note(String note) {
             this.note = note;
             return this;
@@ -203,7 +263,12 @@ public class OrderResponse {
         }
 
         public OrderResponse build() {
-            return new OrderResponse(id, tableId, tableNumber, tableCapacity, status, totalAmount, note, createdAt, updatedAt, items, totalItemCount);
+            OrderResponse resp = new OrderResponse(id, tableId, tableNumber, tableCapacity, status, totalAmount, note, createdAt, updatedAt, items, totalItemCount);
+            resp.setPromotionId(promotionId);
+            resp.setPromotionCode(promotionCode);
+            resp.setDiscountAmount(discountAmount != null ? discountAmount : BigDecimal.ZERO);
+            resp.setFinalAmount(finalAmount != null ? finalAmount : totalAmount);
+            return resp;
         }
     }
 }

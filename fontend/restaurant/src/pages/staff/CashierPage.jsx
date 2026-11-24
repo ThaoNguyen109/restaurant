@@ -4,6 +4,7 @@ import '../../styles/pages/staff/CashierPage.css'
 import { getAllOrders, updateOrderStatus, getOrderStats, getOrderById } from '../../services/orderService'
 import { getRole } from '../../utils/auth'
 import { createVNPayUrl, processPaymentCheckout } from '../../services/paymentService'
+import { getActivePromotions, calculatePromotion } from '../../services/promotionService'
 import { subscribeWebSocket } from '../../services/websocketService'
 
 function formatCurrency(amount) {
@@ -39,6 +40,10 @@ function CashierPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [discountPercent, setDiscountPercent] = useState(0)
+  const [activePromos, setActivePromos] = useState([])
+  const [selectedPromoCode, setSelectedPromoCode] = useState('')
+  const [appliedPromoResult, setAppliedPromoResult] = useState(null)
+  const [calculatingPromo, setCalculatingPromo] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('CASH')
   const [cashGiven, setCashGiven] = useState('')
   const [submittingCheckout, setSubmittingCheckout] = useState(false)
@@ -61,9 +66,10 @@ function CashierPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [allOrdersData, statsData] = await Promise.all([
+      const [allOrdersData, statsData, promosData] = await Promise.all([
         getAllOrders().catch(() => []),
         getOrderStats().catch(() => ({})),
+        getActivePromotions().catch(() => []),
       ])
 
       const activeUnpaid = (allOrdersData || []).filter(
@@ -71,6 +77,7 @@ function CashierPage() {
       )
       setOrders(activeUnpaid)
       if (statsData) setStats(statsData)
+      if (promosData) setActivePromos(promosData)
 
       setSelectedOrder(prev => {
         // Nếu đã có đơn vừa thanh toán hoàn tất thì không tự động chuyển đơn
@@ -195,8 +202,8 @@ function CashierPage() {
     : discountPercent
   const subtotal = activeOrder ? (activeOrder.totalAmount || 0) : 0
   const discountAmount = isOrderPaid
-    ? (activeOrder.discountAmount || Math.round((subtotal * effectiveDiscountPercent) / 100))
-    : Math.round((subtotal * effectiveDiscountPercent) / 100)
+    ? (activeOrder.discountAmount || (activeOrder.promotionCode ? activeOrder.discountAmount : Math.round((subtotal * effectiveDiscountPercent) / 100)))
+    : (appliedPromoResult ? appliedPromoResult.discountAmount : Math.round((subtotal * effectiveDiscountPercent) / 100))
   const finalTotal = isOrderPaid
     ? (activeOrder.finalTotal ?? Math.max(0, subtotal - discountAmount))
     : Math.max(0, subtotal - discountAmount)
@@ -209,6 +216,43 @@ function CashierPage() {
   const effectivePaymentMethod = isOrderPaid
     ? (activeOrder.paymentMethod || 'CASH')
     : paymentMethod
+
+  const handleApplyCashierPromo = async (codeToApply) => {
+    const code = (codeToApply || selectedPromoCode).trim().toUpperCase()
+    if (!code) {
+      setAppliedPromoResult(null)
+      setSelectedPromoCode('')
+      return
+    }
+    if (subtotal <= 0) {
+      showToast('Đơn hàng không có món để áp dụng khuyến mãi!')
+      return
+    }
+
+    try {
+      setCalculatingPromo(true)
+      const res = await calculatePromotion({ code, orderTotal: subtotal })
+      if (res.valid) {
+        setAppliedPromoResult(res)
+        setSelectedPromoCode(code)
+        setDiscountPercent(0)
+        showToast(res.message || 'Áp dụng khuyến mãi thành công!')
+      } else {
+        setAppliedPromoResult(null)
+        showToast(res.message || 'Mã không đủ điều kiện!')
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi kiểm tra khuyến mãi')
+    } finally {
+      setCalculatingPromo(false)
+    }
+  }
+
+  const handleClearCashierPromo = () => {
+    setAppliedPromoResult(null)
+    setSelectedPromoCode('')
+    showToast('Đã hủy áp dụng mã khuyến mãi')
+  }
 
   const handleCheckoutSubmit = async () => {
     if (!selectedOrder) return
@@ -226,6 +270,7 @@ function CashierPage() {
         changeAmount: changeAmount,
         discountAmount: discountAmount,
         discountPercent: discountPercent,
+        promotionCode: selectedPromoCode || undefined,
         note: `Thanh toán tại quầy - Bàn ${selectedOrder.tableNumber || 'Mang về'}`
       })
 
@@ -242,6 +287,7 @@ function CashierPage() {
         finalTotal,
         cashGiven: numCashGiven,
         changeAmount,
+        promotionCode: selectedPromoCode || activeOrder?.promotionCode,
         paidAt: paymentRecord?.createdAt || new Date().toISOString()
       }
       completedOrderRef.current = completedData
@@ -249,6 +295,8 @@ function CashierPage() {
       setSelectedOrder(null)
       setCashGiven('')
       setDiscountPercent(0)
+      setSelectedPromoCode('')
+      setAppliedPromoResult(null)
       fetchData()
     } catch (err) {
       showToast('Thanh toán thất bại: ' + (err.message || ''))
@@ -324,10 +372,17 @@ function CashierPage() {
       let isMounted = true
       setVnpayLoading(true)
       setVnpayError('')
+
+      const effectiveHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '192.168.1.227'
+        : window.location.hostname
+      const returnUrl = `${window.location.protocol}//${effectiveHost}:5173/payment/vnpay-return`
+
       createVNPayUrl({
         orderId: selectedOrder.id,
         amount: finalTotal,
-        orderInfo: `Thanh toan don ${selectedOrder.id} - Ban ${selectedOrder.tableNumber}`
+        orderInfo: `Thanh toan don ${selectedOrder.id} - Ban ${selectedOrder.tableNumber}`,
+        returnUrl: returnUrl,
       })
         .then(res => {
           if (isMounted) {
@@ -667,21 +722,74 @@ function CashierPage() {
                       <span>Tạm tính ({selectedOrder?.items?.length || 0} món):</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
+
+                    {/* Chọn Mã Voucher Khuyến Mãi (Strategy Pattern) */}
                     <div className="cashier-calc-row">
-                      <span>Giảm giá (%):</span>
-                      <select
-                        value={discountPercent}
-                        onChange={e => setDiscountPercent(Number(e.target.value))}
-                        style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                      >
-                        {[0, 5, 10, 15, 20, 25, 30].map(v => (
-                          <option key={v} value={v}>{v}%</option>
-                        ))}
-                      </select>
+                      <span>Mã Voucher:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <select
+                          value={selectedPromoCode}
+                          onChange={e => handleApplyCashierPromo(e.target.value)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '0.82rem',
+                            maxWidth: '150px',
+                            background: selectedPromoCode ? '#f0fdf4' : '#fff',
+                            color: selectedPromoCode ? '#166534' : '#334155',
+                            fontWeight: selectedPromoCode ? '700' : 'normal'
+                          }}
+                        >
+                          <option value="">-- Chọn voucher --</option>
+                          {activePromos.map(p => (
+                            <option key={p.id} value={p.code}>
+                              {p.code} ({p.type === 'PERCENTAGE' ? `-${p.discountValue}%` : `-${formatCurrency(p.discountValue)}`})
+                            </option>
+                          ))}
+                        </select>
+                        {selectedPromoCode && (
+                          <button
+                            type="button"
+                            onClick={handleClearCashierPromo}
+                            style={{
+                              border: 'none',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              borderRadius: '4px',
+                              padding: '2px 6px',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              fontWeight: 'bold'
+                            }}
+                            title="Hủy voucher"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {!selectedPromoCode && (
+                      <div className="cashier-calc-row">
+                        <span>Giảm giá (% thủ công):</span>
+                        <select
+                          value={discountPercent}
+                          onChange={e => setDiscountPercent(Number(e.target.value))}
+                          style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        >
+                          {[0, 5, 10, 15, 20, 25, 30].map(v => (
+                            <option key={v} value={v}>{v}%</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {discountAmount > 0 && (
                       <div className="cashier-calc-row" style={{ color: '#ef4444' }}>
-                        <span>Số tiền giảm:</span>
+                        <span>
+                          Số tiền giảm {selectedPromoCode ? `(${selectedPromoCode})` : `(${effectiveDiscountPercent}%)`}:
+                        </span>
                         <span>-{formatCurrency(discountAmount)}</span>
                       </div>
                     )}

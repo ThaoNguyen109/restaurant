@@ -9,7 +9,7 @@ import CustomerChatBox from '../../components/customer/CustomerChatBox'
 /* ── Format tiền VNĐ ── */
 const fmt = (n) => (!n ? '0' : Number(n).toLocaleString('vi-VN'))
 
-/* ── Lotus Logo SVG (Hồng Sen #d86888 & Lá Sen Ngọc) ── */
+/* ── Lotus Logo SVG (Hồng Sen #d86888 & Lá Sen Ngọc #2d6a4f) ── */
 export function LotusLogo({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className="cp-lotus-svg">
@@ -24,14 +24,16 @@ export function LotusLogo({ size = 36 }) {
           <stop offset="100%" stopColor="#d86888" />
         </linearGradient>
         <linearGradient id="lotusLeafCore" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#98cca9" />
-          <stop offset="100%" stopColor="#3b7a57" />
+          <stop offset="0%" stopColor="#529471" />
+          <stop offset="100%" stopColor="#2d6a4f" />
         </linearGradient>
       </defs>
+      {/* Đài / Lá sen xanh ngọc bích nâng đỡ hoa */}
+      <path d="M5 32C10 36.5 15.5 38.5 22 38.5C28.5 38.5 34 36.5 39 32C34.5 34.5 28.5 35.5 22 35.5C15.5 35.5 9.5 34.5 5 32Z" fill="url(#lotusLeafCore)" />
+      {/* Cánh sen nở hai bên */}
+      <path d="M22 13C16 17 8 22 8 28C8 32 11.5 35.5 15.5 35.5C18.5 35.5 20.8 33.5 22 30.5C23.2 33.5 25.5 35.5 28.5 35.5C32.5 35.5 36 32 36 28C36 22 28 17 22 13Z" fill="url(#lotusOuterPink)" opacity="0.8" />
       {/* Cánh sen chính */}
       <path d="M22 6C19.5 13 13 18 13 25C13 30 17 34 22 34C27 34 31 30 31 25C31 18 24.5 13 22 6Z" fill="url(#lotusPinkGrad)" opacity="0.95" />
-      {/* Cánh sen nở hai bên */}
-      <path d="M22 13C16 17 8 22 8 28C8 32 11.5 35.5 15.5 35.5C18.5 35.5 20.8 33.5 22 30.5C23.2 33.5 25.5 35.5 28.5 35.5C32.5 35.5 36 32 36 28C36 22 28 17 22 13Z" fill="url(#lotusOuterPink)" opacity="0.75" />
       {/* Cánh sen lớp trong */}
       <path d="M22 20C17.5 23.5 12 27 12 30.5C12 33.5 14.8 35.5 18 35C19.5 32 20.5 28.5 22 25C23.5 28.5 24.5 32 26 35C29.2 35.5 32 33.5 32 30.5C32 27 26.5 23.5 22 20Z" fill="url(#lotusPinkGrad)" opacity="0.9" />
       {/* Tâm sen ngọc thanh tao */}
@@ -144,7 +146,7 @@ function HeroSection() {
           </button>
           <button className="cp-btn-secondary" onClick={() => navigate('/customer/menu')}>
             Khám Phá Thực Đơn
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
           </button>
         </div>
       </div>
@@ -320,12 +322,12 @@ function ExperiencesSection() {
               <p>{exp.desc}</p>
               <div className="cp-exp-footer">
                 <span className="cp-exp-time">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                   {exp.time}
                 </span>
                 <Link to="/customer/reservation" className="cp-exp-link">
                   Đặt bàn
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                 </Link>
               </div>
             </div>
@@ -349,7 +351,7 @@ function RealMenuSection() {
   const fallbackImg = '/menu_pho.png'
 
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       try {
         setLoading(true)
         const [cats, items] = await Promise.all([
@@ -485,7 +487,7 @@ function RealMenuSection() {
             onClick={() => navigate('/customer/menu')}
           >
             Xem Toàn Bộ Thực Đơn
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
           </button>
         </div>
       </div>
@@ -579,7 +581,7 @@ function ReservationBanner() {
                 Đặt Bàn Trực Tuyến Ngay
               </button>
               <a href="tel:02437198899" className="cp-btn-phone">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 Hotline: (024) 3719 8899
               </a>
             </div>

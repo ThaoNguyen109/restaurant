@@ -85,6 +85,7 @@ function StaffDashboard() {
   const [selectedTable, setSelectedTable] = useState(null)
   const [activeTableOrder, setActiveTableOrder] = useState(null)
   const [showTableModal, setShowTableModal] = useState(false)
+  const [selectedComboDetail, setSelectedComboDetail] = useState(null) // Modal chi tiết combo cho phục vụ
 
   // ── Mobile POS Ordering State ─────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState('ALL')
@@ -970,7 +971,8 @@ function StaffDashboard() {
                         <div
                           key={combo.id}
                           className={`pos-dish-card ${inCart ? 'in-cart' : ''}`}
-                          onClick={() => handleAddToCart(combo, true)}
+                          onClick={() => setSelectedComboDetail(combo)}
+                          title="Bấm để xem chi tiết các món trong combo"
                         >
                           <div className="dish-card-thumb">
                             {combo.image ? (
@@ -998,6 +1000,12 @@ function StaffDashboard() {
                           <div className="dish-card-body">
                             <span className="dish-category-tag combo">Combo tiết kiệm</span>
                             <h4 className="dish-name" title={combo.name}>{combo.name}</h4>
+                            
+                            {/* Dòng bấm xem nhanh các món gồm có trong combo */}
+                            <div className="combo-card-preview-btn">
+                              <span>Xem {combo.items?.length || 0} món gồm có &rsaquo;</span>
+                            </div>
+
                             <div className="dish-bottom-row">
                               <span className="dish-price">{formatCurrency(combo.price)}</span>
                               <button
@@ -1007,7 +1015,7 @@ function StaffDashboard() {
                                   e.stopPropagation()
                                   handleAddToCart(combo, true)
                                 }}
-                                title="Thêm combo"
+                                title="Thêm nhanh combo vào đơn"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1339,6 +1347,102 @@ function StaffDashboard() {
                 onClick={handleCheckoutTable}
               >
                 💰 Thu tiền &amp; Trả bàn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3.1 MODAL: CHI TIẾT COMBO DÀNH CHO PHỤC VỤ TƯ VẤN & GỌI MÓN ── */}
+      {selectedComboDetail && (
+        <div className="waiter-modal-overlay" onClick={() => setSelectedComboDetail(null)}>
+          <div className="waiter-modal-box staff-combo-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <span className="dish-category-tag combo">Gói Combo</span>
+                <h2 className="modal-table-num">{selectedComboDetail.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedComboDetail(null)}
+                title="Đóng"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="staff-combo-body">
+              {selectedComboDetail.image && (
+                <div className="staff-combo-img-wrap">
+                  <img
+                    src={getImageFullUrl(selectedComboDetail.image)}
+                    alt={selectedComboDetail.name}
+                    className="staff-combo-img"
+                  />
+                </div>
+              )}
+
+              <div className="staff-combo-price-row">
+                <span className="staff-combo-price-label">Giá trọn gói:</span>
+                <span className="staff-combo-price-val">{formatCurrency(selectedComboDetail.price)}</span>
+              </div>
+
+              {selectedComboDetail.description && (
+                <div className="staff-combo-desc-box">
+                  <strong>Mô tả:</strong> {selectedComboDetail.description}
+                </div>
+              )}
+
+              <div className="staff-combo-items-section">
+                <h4 className="staff-combo-section-title">
+                  🍲 Món gồm có trong combo ({selectedComboDetail.items?.length || 0} món):
+                </h4>
+
+                {selectedComboDetail.items && selectedComboDetail.items.length > 0 ? (
+                  <div className="staff-combo-items-grid">
+                    {selectedComboDetail.items.map((ci, idx) => (
+                      <div key={idx} className="staff-combo-item-chip">
+                        {ci.menuItemImage ? (
+                          <img
+                            src={getImageFullUrl(ci.menuItemImage)}
+                            alt={ci.menuItemName}
+                            className="staff-combo-item-thumb"
+                          />
+                        ) : (
+                          <span className="staff-combo-item-thumb placeholder">🍽️</span>
+                        )}
+                        <div className="staff-combo-item-text">
+                          <span className="staff-combo-item-name">{ci.menuItemName}</span>
+                          <span className="staff-combo-item-qty">Số lượng: <strong>{ci.quantity}x</strong></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="combo-no-items">Combo này chưa được cấu hình danh sách món.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="staff-combo-footer">
+              <button
+                type="button"
+                className="modal-btn secondary"
+                onClick={() => setSelectedComboDetail(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="modal-btn add-items"
+                onClick={() => {
+                  handleAddToCart(selectedComboDetail, true)
+                  setSelectedComboDetail(null)
+                  showToast(`Đã thêm ${selectedComboDetail.name} vào giỏ!`)
+                }}
+              >
+                ➕ Thêm vào đơn ({formatCurrency(selectedComboDetail.price)})
               </button>
             </div>
           </div>

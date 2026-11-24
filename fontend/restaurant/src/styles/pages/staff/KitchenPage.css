@@ -468,6 +468,82 @@
   align-self: flex-start;
 }
 
+/* Badge COMBO trên tên món */
+.kds-combo-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: #d97706;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+/* Khung món thành phần trong Combo cho Bếp */
+.kds-combo-box {
+  margin: 6px 0 3px 0;
+  padding: 6px 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 3px solid #16a34a;
+  border-radius: 6px;
+}
+
+.kds-combo-box-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #15803d;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kds-combo-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kds-combo-item {
+  font-size: 0.84rem;
+  color: #14532d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.kds-combo-item-qty {
+  font-weight: 800;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  min-width: 24px;
+  text-align: center;
+}
+
+.kds-combo-item-name {
+  font-weight: 600;
+  color: #166534;
+}
+
+.kds-combo-item-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: normal;
+}
+
 .kds-item-btn {
   padding: 10px 16px;
   border-radius: 10px;

@@ -32,6 +32,21 @@ public class Order {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    @Column(name = "promotion_id")
+    private Long promotionId;
+
+    @Column(name = "promotion_code", length = 50)
+    private String promotionCode;
+
+    @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "final_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal finalAmount = BigDecimal.ZERO;
+
+    @Column(name = "customer_id")
+    private Long customerId;
+
     @Column(length = 255)
     private String note;
 
@@ -57,6 +72,28 @@ public class Order {
 
     public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+
+    public Long getPromotionId() { return promotionId; }
+    public void setPromotionId(Long promotionId) { this.promotionId = promotionId; }
+
+    public String getPromotionCode() { return promotionCode; }
+    public void setPromotionCode(String promotionCode) { this.promotionCode = promotionCode; }
+
+    public BigDecimal getDiscountAmount() { return discountAmount != null ? discountAmount : BigDecimal.ZERO; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+
+    public BigDecimal getFinalAmount() {
+        if (finalAmount != null && finalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            return finalAmount;
+        }
+        BigDecimal total = totalAmount != null ? totalAmount : BigDecimal.ZERO;
+        BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        return total.subtract(discount).max(BigDecimal.ZERO);
+    }
+    public void setFinalAmount(BigDecimal finalAmount) { this.finalAmount = finalAmount; }
+
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }

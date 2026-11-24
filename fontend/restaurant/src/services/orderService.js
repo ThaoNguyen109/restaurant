@@ -7,6 +7,8 @@ export async function getAllOrders(params = {}) {
   const queryParams = new URLSearchParams()
   if (params.status && params.status !== 'ALL') queryParams.append('status', params.status)
   if (params.date) queryParams.append('date', params.date)
+  if (params.startDate) queryParams.append('startDate', params.startDate)
+  if (params.endDate) queryParams.append('endDate', params.endDate)
   if (params.search) queryParams.append('search', params.search)
   if (params.tableId) queryParams.append('tableId', params.tableId)
 
@@ -203,5 +205,46 @@ export async function deleteOrderItem(orderId, itemId) {
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(data.message || 'Xóa món thất bại')
+  return data
+}
+
+/**
+ * Khách hàng quét mã QR gọi món (API Public, không cần token)
+ * @param {{ tableId: number, note?: string, items: Array<{ menuItemId?: number, comboId?: number, quantity: number, note?: string }> }} payload
+ */
+export async function createCustomerOrder(payload) {
+  const response = await apiFetch('/api/orders/customer', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    if (data.errors) {
+      const errorMsg = Object.values(data.errors).join('\n')
+      throw new Error(errorMsg || data.message || 'Gửi gọi món thất bại')
+    }
+    throw new Error(data.message || 'Gửi gọi món thất bại')
+  }
+  return data
+}
+
+/**
+ * Khách hàng xem danh sách đơn/món của bàn mình (API Public, không cần token)
+ * @param {number} tableId
+ */
+export async function getCustomerActiveOrders(tableId) {
+  const response = await apiFetch(`/api/orders/customer/table/${tableId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  const data = await response.json().catch(() => [])
+  if (!response.ok) throw new Error(data.message || 'Không thể tải đơn hàng của bàn')
   return data
 }

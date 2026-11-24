@@ -72,7 +72,6 @@ export default function ReservationsPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDate, setFilterDate]     = useState('')
   const [datePreset, setDatePreset]     = useState('ALL') // ALL, TODAY, TOMORROW, CUSTOM
-  const [viewMode, setViewMode]         = useState('table') // 'table' | 'cards'
 
   // Toast
   const [toast, setToast]               = useState(null)
@@ -278,7 +277,7 @@ export default function ReservationsPage() {
     >
       <div className="reservations-admin-page">
         {/* ── 1. METRICS GRID ─────────────────────────────────────── */}
-        <div className="res-metrics-grid">
+        <div className="res-metrics-grid" style={{ marginBottom: 16 }}>
           <div
             className={`res-metric-card${datePreset === 'ALL' && !filterStatus ? ' active' : ''}`}
             onClick={handleClearFilters}
@@ -340,74 +339,90 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* ── 2. CONTROL PANEL & TABS ────────────────────────────── */}
-        <div className="res-control-panel">
-          {/* Status Tabs */}
-          <div className="res-status-tabs">
+        {/* ── 2. STATUS TABS (Hàng trạng thái) ──────────────────── */}
+        <div style={{ marginBottom: 12 }}>
+          <div className="admin-tabs">
             {FILTER_TABS.map(tab => {
               const count = tab.key === ''
                 ? stats.all
                 : reservations.filter(r => r.status === tab.key).length
               const isActive = filterStatus === tab.key
+              let countCls = ''
+              if (tab.key === 'PENDING') countCls = ' warning'
+              else if (tab.key === 'CONFIRMED' || tab.key === 'COMPLETED') countCls = ' success'
+              else if (tab.key === 'CANCELLED') countCls = ' danger'
+              else if (tab.key === 'SEATED') countCls = ' info'
+
               return (
                 <button
                   key={tab.key}
                   type="button"
-                  className={`res-tab-btn${isActive ? ' active' : ''}`}
+                  className={`admin-tab-item${isActive ? ' active' : ''}`}
                   onClick={() => setFilterStatus(tab.key)}
                 >
                   <span>{tab.label}</span>
-                  <span className="res-tab-count">{count}</span>
+                  <span className={`admin-tab-count${countCls}`}>{count}</span>
                 </button>
               )
             })}
           </div>
+        </div>
 
-          {/* Filter Row: Search, Date Segmented, View Mode */}
-          <div className="res-filter-row">
-            <div className="res-search-box">
-              <input
-                type="text"
-                placeholder="Tìm khách hàng theo tên, số điện thoại, email..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className="res-search-clear"
-                  onClick={() => setSearch('')}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <div className="res-date-segmented">
+        {/* ── 2. SEARCH & DATE FILTER ROW (Thanh tìm kiếm bên trái dài & đẹp) ── */}
+        <div className="admin-toolbar" style={{ alignItems: 'center', marginBottom: 16 }}>
+          {/* Thanh tìm kiếm bên trái dài và đẹp */}
+          <div className="admin-search-bar" style={{ minWidth: 320, flex: 1 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="admin-search-icon">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="admin-search-input"
+              placeholder="Tìm khách hàng theo tên, số điện thoại, email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
               <button
                 type="button"
-                className={`res-seg-btn${datePreset === 'ALL' ? ' active' : ''}`}
+                className="admin-search-clear"
+                onClick={() => setSearch('')}
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Cụm lọc ngày & xóa lọc bên phải */}
+          <div className="admin-toolbar-right">
+            <div className="admin-segmented-group" style={{ height: 42, borderRadius: 12 }}>
+              <button
+                type="button"
+                className={`admin-segmented-btn${datePreset === 'ALL' ? ' active' : ''}`}
                 onClick={() => { setDatePreset('ALL'); setFilterDate('') }}
               >
                 Mọi ngày
               </button>
               <button
                 type="button"
-                className={`res-seg-btn${datePreset === 'TODAY' ? ' active' : ''}`}
+                className={`admin-segmented-btn${datePreset === 'TODAY' ? ' active' : ''}`}
                 onClick={() => { setDatePreset('TODAY'); setFilterDate('') }}
               >
                 Hôm nay
               </button>
               <button
                 type="button"
-                className={`res-seg-btn${datePreset === 'TOMORROW' ? ' active' : ''}`}
+                className={`admin-segmented-btn${datePreset === 'TOMORROW' ? ' active' : ''}`}
                 onClick={() => { setDatePreset('TOMORROW'); setFilterDate('') }}
               >
                 Ngày mai
               </button>
               <input
                 type="date"
-                className="res-date-picker"
+                className="admin-date-picker"
+                style={{ height: 32, borderRadius: 8 }}
                 value={datePreset === 'CUSTOM' ? filterDate : ''}
                 onChange={e => {
                   setDatePreset('CUSTOM')
@@ -417,38 +432,20 @@ export default function ReservationsPage() {
               />
             </div>
 
-            <div className="res-view-toggle">
-              <button
-                type="button"
-                className={`res-view-btn${viewMode === 'table' ? ' active' : ''}`}
-                onClick={() => setViewMode('table')}
-                title="Xem dạng bảng"
-              >
-                Bảng
-              </button>
-              <button
-                type="button"
-                className={`res-view-btn${viewMode === 'cards' ? ' active' : ''}`}
-                onClick={() => setViewMode('cards')}
-                title="Xem dạng thẻ"
-              >
-                Thẻ
-              </button>
-            </div>
-
             {(search || filterStatus || datePreset !== 'ALL' || filterDate) && (
               <button
                 type="button"
-                className="res-btn-reset"
+                className="admin-btn-reset"
+                style={{ height: 42, borderRadius: 12 }}
                 onClick={handleClearFilters}
               >
-                Xóa bộ lọc
+                ✕ Xóa lọc
               </button>
             )}
           </div>
         </div>
 
-        {/* ── 3. DATA VIEW: TABLE OR CARDS ───────────────────────── */}
+        {/* ── 3. DATA VIEW: TABLE ─────────────────────────────────── */}
         {loading ? (
           <div className="res-state-box">
             <div className="res-spinner" />
@@ -466,11 +463,10 @@ export default function ReservationsPage() {
               + Tạo đặt bàn mới
             </button>
           </div>
-        ) : viewMode === 'table' ? (
-
+        ) : (
           /* ── TABLE VIEW ───────────────────────────────────────── */
-          <div className="res-table-wrap">
-            <table className="res-data-table">
+          <div className="res-table-wrap table-card" style={{ padding: '16px 20px', overflowX: 'auto' }}>
+            <table className="res-data-table data-table">
               <thead>
                 <tr>
                   <th style={{ width: '180px' }}>Khách hàng</th>
@@ -487,7 +483,13 @@ export default function ReservationsPage() {
                   const cfg = STATUS_CONFIG[res.status] || STATUS_CONFIG.PENDING
                   const isToday = res.reservationDate === getTodayString()
                   return (
-                    <tr key={res.id}>
+                    <tr
+                      key={res.id}
+                      className="clickable-row"
+                      onClick={() => setDetailItem(res)}
+                      style={{ cursor: 'pointer' }}
+                      title="Bấm để xem chi tiết và chỉnh sửa đặt bàn"
+                    >
                       {/* Khách hàng */}
                       <td>
                         <div className="res-customer-cell">
@@ -540,6 +542,7 @@ export default function ReservationsPage() {
                         <select
                           className="res-quick-status-select"
                           value={res.status}
+                          onClick={e => e.stopPropagation()}
                           onChange={e => handleQuickStatus(res.id, e.target.value, res.customerName)}
                         >
                           <option value="PENDING">Chờ duyệt</option>
@@ -550,21 +553,16 @@ export default function ReservationsPage() {
                         </select>
                       </td>
 
-                      {/* Thao tác */}
+                      {/* Thao tác (Đã bỏ nút Xem, bấm hàng để xem chi tiết/sửa) */}
                       <td>
                         <div className="res-actions-cell">
                           <button
                             type="button"
                             className="res-act-btn"
-                            onClick={() => setDetailItem(res)}
-                            title="Xem chi tiết"
-                          >
-                            Xem
-                          </button>
-                          <button
-                            type="button"
-                            className="res-act-btn"
-                            onClick={() => handleOpenEdit(res)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenEdit(res)
+                            }}
                             title="Chỉnh sửa thông tin"
                           >
                             Sửa
@@ -572,7 +570,10 @@ export default function ReservationsPage() {
                           <button
                             type="button"
                             className="res-act-btn danger"
-                            onClick={() => setDeleteItem(res)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteItem(res)
+                            }}
                             title="Xóa đặt bàn"
                           >
                             Xóa
@@ -584,83 +585,6 @@ export default function ReservationsPage() {
                 })}
               </tbody>
             </table>
-          </div>
-
-        ) : (
-
-          /* ── CARDS VIEW ───────────────────────────────────────── */
-          <div className="res-cards-grid">
-            {reservations.map(res => {
-              const cfg = STATUS_CONFIG[res.status] || STATUS_CONFIG.PENDING
-              const isToday = res.reservationDate === getTodayString()
-              return (
-                <div key={res.id} className="res-card">
-                  <div className="res-card-head">
-                    <div className="res-card-time-group">
-                      <span className="res-card-hour">
-                        {res.reservationTime ? res.reservationTime.substring(0, 5) : '--:--'}
-                      </span>
-                      <span className="res-card-date">{formatDate(res.reservationDate)}</span>
-                      {isToday && <span className="res-pill-today">Hôm nay</span>}
-                    </div>
-                    <span className={`res-badge ${cfg.cls}`}>{cfg.label}</span>
-                  </div>
-
-                  <div className="res-card-body">
-                    <div className="res-card-name">{res.customerName}</div>
-                    <div className="res-card-meta">
-                      <a href={`tel:${res.customerPhone}`} className="res-card-phone">
-                        {res.customerPhone}
-                      </a>
-                      <span className="res-dot">·</span>
-                      <span>{res.numberOfGuests} khách</span>
-                      <span className="res-dot">·</span>
-                      {res.tableNumber ? (
-                        <span className="res-table-inline">Bàn {res.tableNumber}</span>
-                      ) : (
-                        <span className="res-unassigned-inline">Chưa gán bàn</span>
-                      )}
-                    </div>
-                    {res.note && (
-                      <div className="res-card-note">
-                        <strong>Ghi chú:</strong> {res.note}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="res-card-foot">
-                    <div className="res-card-status-change">
-                      <select
-                        value={res.status}
-                        onChange={e => handleQuickStatus(res.id, e.target.value, res.customerName)}
-                      >
-                        <option value="PENDING">Chờ duyệt</option>
-                        <option value="CONFIRMED">Xác nhận</option>
-                        <option value="COMPLETED">Đã đến</option>
-                        <option value="CANCELLED">Hủy</option>
-                        <option value="NO_SHOW">Vắng</option>
-                      </select>
-                    </div>
-                    <div className="res-card-action-btns">
-                      <button
-                        type="button"
-                        className="res-act-btn"
-                        onClick={() => handleOpenEdit(res)}
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        className="res-act-btn danger"
-                        onClick={() => setDeleteItem(res)}
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
         )}
 

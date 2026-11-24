@@ -31,6 +31,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final OrderService orderService;
+    private final PromotionService promotionService;
     private final WebSocketEventService wsEventService;
 
     /**
@@ -72,7 +73,16 @@ public class PaymentService {
                 : "Thanh toan don hang " + order.getId());
         vnpParams.put("vnp_OrderType", "other");
         vnpParams.put("vnp_Locale", "vn");
-        vnpParams.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
+        String effectiveReturnUrl = vnPayConfig.getReturnUrl();
+        if (request.getReturnUrl() != null && !request.getReturnUrl().isBlank()) {
+            effectiveReturnUrl = request.getReturnUrl().trim();
+        } else {
+            String origin = httpRequest.getHeader("Origin");
+            if (origin != null && !origin.isBlank() && !origin.contains("localhost") && !origin.contains("127.0.0.1")) {
+                effectiveReturnUrl = origin + "/payment/vnpay-return";
+            }
+        }
+        vnpParams.put("vnp_ReturnUrl", effectiveReturnUrl);
         vnpParams.put("vnp_IpAddr", vnpIpAddr);
         vnpParams.put("vnp_CreateDate", vnpCreateDate);
         vnpParams.put("vnp_ExpireDate", vnpExpireDate);
@@ -282,6 +292,17 @@ public class PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
         log.info("Processed checkout for Order #{}, amount: {}, method: {}", order.getId(), amount, method);
+
+        // Cập nhật thông tin khuyến mãi vào Order
+        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+            order.setPromotionCode(request.getPromotionCode().trim().toUpperCase());
+            promotionService.incrementUsedCount(request.getPromotionCode());
+        }
+        if (request.getDiscountAmount() != null) {
+            order.setDiscountAmount(request.getDiscountAmount());
+        }
+        order.setFinalAmount(amount);
+        orderRepository.save(order);
 
         // 2. Chuyển đơn sang COMPLETED
         OrderResponse updatedOrder = orderService.updateOrderStatus(order.getId(), new OrderStatusRequest("COMPLETED"));

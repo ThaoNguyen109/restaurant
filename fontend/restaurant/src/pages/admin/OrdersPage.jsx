@@ -81,11 +81,6 @@ function getTodayString() {
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
 }
 
-function getYesterdayString() {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-}
 
 export default function OrdersPage() {
   const role = getRole()?.toUpperCase()
@@ -107,10 +102,9 @@ export default function OrdersPage() {
 
   // Filters & Views
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [dateFilter, setDateFilter]     = useState('')
-  const [datePreset, setDatePreset]     = useState('ALL') // ALL, TODAY, YESTERDAY, CUSTOM
+  const [startDate, setStartDate]       = useState('')
+  const [endDate, setEndDate]           = useState('')
   const [searchTerm, setSearchTerm]     = useState('')
-  const [viewMode, setViewMode]         = useState('table') // 'table' | 'cards'
   const [currentPage, setCurrentPage]   = useState(1)
   const pageSize = 12
 
@@ -133,15 +127,11 @@ export default function OrdersPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      let resolvedDate = undefined
-      if (datePreset === 'TODAY') resolvedDate = getTodayString()
-      else if (datePreset === 'YESTERDAY') resolvedDate = getYesterdayString()
-      else if (datePreset === 'CUSTOM' && dateFilter) resolvedDate = dateFilter
-
       const [ordersData, statsData] = await Promise.all([
         getAllOrders({
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
-          date: resolvedDate,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           search: searchTerm ? searchTerm.trim() : undefined,
         }),
         getOrderStats().catch(() => ({})),
@@ -155,7 +145,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, datePreset, dateFilter, searchTerm])
+  }, [statusFilter, startDate, endDate, searchTerm])
 
   useEffect(() => {
     fetchData()
@@ -259,11 +249,21 @@ export default function OrdersPage() {
       }
     >
       <div className="orders-page">
-        {/* ── 1. EXECUTIVE METRIC CARDS ───────────────────────────── */}
-        <div className="ord-metrics-grid">
+        {/* ── 1. METRIC CARDS (Giữ 3 thẻ: Tổng đơn, Đã hoàn tất, Doanh thu) ── */}
+        <div className="ord-metrics-grid" style={{ marginBottom: 16 }}>
           <div
-            className={`ord-metric-card${datePreset === 'TODAY' && statusFilter === 'ALL' ? ' active' : ''}`}
-            onClick={() => { setDatePreset('TODAY'); setStatusFilter('ALL'); setDateFilter('') }}
+            className={`ord-metric-card${startDate === getTodayString() && endDate === getTodayString() && statusFilter === 'ALL' ? ' active' : ''}`}
+            onClick={() => {
+              if (startDate === getTodayString() && endDate === getTodayString() && statusFilter === 'ALL') {
+                setStartDate('')
+                setEndDate('')
+              } else {
+                setStartDate(getTodayString())
+                setEndDate(getTodayString())
+                setStatusFilter('ALL')
+              }
+            }}
+            title="Bấm để lọc đơn hôm nay / xem tất cả"
           >
             <div className="ord-metric-head">
               <span className="ord-metric-label">Tổng đơn hôm nay</span>
@@ -274,36 +274,19 @@ export default function OrdersPage() {
           </div>
 
           <div
-            className={`ord-metric-card${statusFilter === 'PENDING' ? ' active' : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-          >
-            <div className="ord-metric-head">
-              <span className="ord-metric-label">Chờ xác nhận</span>
-              {stats.pendingOrders > 0 && <span className="ord-metric-badge warning">Cần duyệt</span>}
-            </div>
-            <div className="ord-metric-value text-amber">{stats.pendingOrders || 0}</div>
-            <div className="ord-metric-sub">Đơn mới gửi từ khách / nhân viên</div>
-          </div>
-
-          <div
-            className={`ord-metric-card${statusFilter === 'PREPARING' || statusFilter === 'SERVING' ? ' active' : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'PREPARING' ? 'ALL' : 'PREPARING')}
-          >
-            <div className="ord-metric-head">
-              <span className="ord-metric-label">Đang nấu &amp; Phục vụ</span>
-              <span className="ord-metric-badge info">Bếp &amp; Sảnh</span>
-            </div>
-            <div className="ord-metric-value text-blue">
-              {(stats.preparingOrders || 0) + (stats.servingOrders || 0)}
-            </div>
-            <div className="ord-metric-sub">
-              {stats.preparingOrders || 0} đang nấu · {stats.servingOrders || 0} đang phục vụ
-            </div>
-          </div>
-
-          <div
-            className={`ord-metric-card${statusFilter === 'COMPLETED' ? ' active' : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+            className={`ord-metric-card${startDate === getTodayString() && endDate === getTodayString() && statusFilter === 'COMPLETED' ? ' active' : ''}`}
+            onClick={() => {
+              if (startDate === getTodayString() && endDate === getTodayString() && statusFilter === 'COMPLETED') {
+                setStartDate('')
+                setEndDate('')
+                setStatusFilter('ALL')
+              } else {
+                setStartDate(getTodayString())
+                setEndDate(getTodayString())
+                setStatusFilter('COMPLETED')
+              }
+            }}
+            title="Bấm để lọc đơn đã hoàn tất hôm nay"
           >
             <div className="ord-metric-head">
               <span className="ord-metric-label">Đã hoàn tất hôm nay</span>
@@ -325,123 +308,127 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* ── 2. SMART TOOLBAR & TABS ────────────────────────────── */}
-        <div className="ord-control-panel">
-          {/* Status Tabs */}
-          <div className="ord-status-tabs">
-            {Object.values(STATUS_CONFIG).map(st => {
-              const count = statusCounts[st.key] || 0
-              const isActive = statusFilter === st.key
-              return (
-                <button
-                  key={st.key}
-                  type="button"
-                  className={`ord-tab-btn ${st.cls}${isActive ? ' active' : ''}`}
-                  onClick={() => setStatusFilter(st.key)}
-                >
-                  <span>{st.label}</span>
-                  <span className="ord-tab-count">{count}</span>
-                </button>
-              )
-            })}
+        {/* ── 2. STATUS TABS (Dạng Tab chuẩn thanh ngang) ───────── */}
+        <div className="admin-underline-tabs">
+          {Object.values(STATUS_CONFIG).map(st => {
+            const count = statusCounts[st.key] || 0
+            const isActive = statusFilter === st.key
+            let badgeCls = ''
+            if (st.key === 'PENDING' && count > 0) badgeCls = ' warning'
+            else if (st.key === 'COMPLETED') badgeCls = ' success'
+            else if (st.key === 'CANCELLED' && count > 0) badgeCls = ' danger'
+            else if ((st.key === 'PREPARING' || st.key === 'SERVING') && count > 0) badgeCls = ' info'
+
+            return (
+              <button
+                key={st.key}
+                type="button"
+                className={`admin-line-tab${isActive ? ' active' : ''}`}
+                onClick={() => setStatusFilter(st.key)}
+              >
+                <span>{st.label}</span>
+                <span className={`admin-tab-count${badgeCls}`}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── 3. SEARCH & DATE FILTER ROW (Thanh tìm kiếm dài & nổi bật + Từ ngày đến ngày) ── */}
+        <div className="admin-toolbar" style={{ alignItems: 'center', marginBottom: 16 }}>
+          {/* Thanh tìm kiếm NỔI BẬT & DÀI ở bên trái */}
+          <div className="admin-search-bar" style={{ minWidth: 320, flex: 1 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="admin-search-icon">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="admin-search-input"
+              placeholder="Tìm kiếm mã đơn (#101), số bàn, món ăn, ghi chú..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="admin-search-clear"
+                onClick={() => setSearchTerm('')}
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          {/* Search, Date presets, View toggle */}
-          <div className="ord-filter-row">
-            <div className="ord-search-wrap">
-              <input
-                type="text"
-                className="ord-search-input"
-                placeholder="Tìm mã đơn (#101), số bàn, ghi chú, món ăn..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
+          {/* Cụm lọc ngày & xóa lọc bên phải */}
+          <div className="admin-toolbar-right">
+            {/* Cụm chọn Từ ngày đến ngày */}
+            <div className="admin-date-range-group" style={{ height: 44, borderRadius: 12 }}>
+              <div className="admin-date-field">
+                <span className="admin-date-label">Từ:</span>
+                <input
+                  type="date"
+                  className="admin-date-picker"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  title="Chọn ngày bắt đầu"
+                />
+              </div>
+              <span className="admin-date-arrow">→</span>
+              <div className="admin-date-field">
+                <span className="admin-date-label">Đến:</span>
+                <input
+                  type="date"
+                  className="admin-date-picker"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  title="Chọn ngày kết thúc"
+                />
+              </div>
+              {(startDate || endDate) && (
                 <button
                   type="button"
-                  className="ord-search-clear"
-                  onClick={() => setSearchTerm('')}
-                  title="Xóa tìm kiếm"
+                  className="admin-date-clear-btn"
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                  title="Xóa lọc khoảng ngày"
+                  style={{
+                    border: 'none',
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    padding: '2px 7px',
+                    fontSize: '0.82rem',
+                    lineHeight: 1,
+                    borderRadius: 6,
+                    fontWeight: 'bold',
+                    marginLeft: 2
+                  }}
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            {/* Date filter presets */}
-            <div className="ord-date-segmented">
+            {/* Nút Xóa lọc tổng */}
+            {(searchTerm || statusFilter !== 'ALL' || startDate || endDate) && (
               <button
                 type="button"
-                className={`ord-seg-btn${datePreset === 'ALL' ? ' active' : ''}`}
-                onClick={() => { setDatePreset('ALL'); setDateFilter('') }}
-              >
-                Mọi ngày
-              </button>
-              <button
-                type="button"
-                className={`ord-seg-btn${datePreset === 'TODAY' ? ' active' : ''}`}
-                onClick={() => { setDatePreset('TODAY'); setDateFilter('') }}
-              >
-                Hôm nay
-              </button>
-              <button
-                type="button"
-                className={`ord-seg-btn${datePreset === 'YESTERDAY' ? ' active' : ''}`}
-                onClick={() => { setDatePreset('YESTERDAY'); setDateFilter('') }}
-              >
-                Hôm qua
-              </button>
-              <input
-                type="date"
-                className="ord-date-picker"
-                value={datePreset === 'CUSTOM' ? dateFilter : ''}
-                onChange={e => {
-                  setDatePreset('CUSTOM')
-                  setDateFilter(e.target.value)
-                }}
-                title="Chọn ngày tùy ý"
-              />
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="ord-view-toggle">
-              <button
-                type="button"
-                className={`ord-view-btn${viewMode === 'table' ? ' active' : ''}`}
-                onClick={() => setViewMode('table')}
-                title="Xem dạng bảng"
-              >
-                Bảng
-              </button>
-              <button
-                type="button"
-                className={`ord-view-btn${viewMode === 'cards' ? ' active' : ''}`}
-                onClick={() => setViewMode('cards')}
-                title="Xem dạng thẻ"
-              >
-                Thẻ
-              </button>
-            </div>
-
-            {/* Clear filters button */}
-            {(searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL' || dateFilter) && (
-              <button
-                type="button"
-                className="ord-btn-reset"
+                className="admin-btn-reset"
+                style={{ height: 44, borderRadius: 12 }}
                 onClick={() => {
                   setSearchTerm('')
                   setStatusFilter('ALL')
-                  setDatePreset('ALL')
-                  setDateFilter('')
+                  setStartDate('')
+                  setEndDate('')
                 }}
               >
-                Xóa lọc
+                ✕ Xóa lọc
               </button>
             )}
           </div>
         </div>
 
-        {/* ── 3. DATA VIEW: TABLE OR CARDS ───────────────────────── */}
+        {/* ── 3. DATA VIEW: TABLE ─────────────────────────────────── */}
         {loading ? (
           <div className="ord-state-box">
             <div className="ord-spinner" />
@@ -452,30 +439,29 @@ export default function OrdersPage() {
           <div className="ord-state-box">
             <div className="ord-state-title">Không tìm thấy đơn hàng nào</div>
             <div className="ord-state-desc">
-              {searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL'
+              {searchTerm || statusFilter !== 'ALL' || startDate || endDate
                 ? 'Không có đơn nào khớp với bộ lọc hiện tại. Thử chọn lại trạng thái hoặc xóa từ khóa tìm kiếm.'
                 : 'Chưa có đơn hàng nào được ghi nhận trong hệ thống.'}
             </div>
-            {(searchTerm || statusFilter !== 'ALL' || datePreset !== 'ALL') && (
+            {(searchTerm || statusFilter !== 'ALL' || startDate || endDate) && (
               <button
                 type="button"
                 className="ord-btn-secondary"
                 onClick={() => {
                   setSearchTerm('')
                   setStatusFilter('ALL')
-                  setDatePreset('ALL')
-                  setDateFilter('')
+                  setStartDate('')
+                  setEndDate('')
                 }}
               >
                 Xem tất cả đơn
               </button>
             )}
           </div>
-        ) : viewMode === 'table' ? (
-
+        ) : (
           /* ── TABLE VIEW ───────────────────────────────────────── */
-          <div className="ord-table-wrapper">
-            <table className="ord-table">
+          <div className="ord-table-wrapper table-card" style={{ padding: '16px 20px', overflowX: 'auto' }}>
+            <table className="ord-table data-table">
               <thead>
                 <tr>
                   <th style={{ width: '130px' }}>Mã đơn &amp; Bàn</th>
@@ -491,7 +477,16 @@ export default function OrdersPage() {
                   const items = order.items || []
                   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
                   return (
-                    <tr key={order.id} className="ord-row">
+                    <tr
+                      key={order.id}
+                      className="ord-row clickable-row"
+                      onClick={() => {
+                        setSelectedOrder(order)
+                        setShowDetailModal(true)
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      title="Bấm để xem chi tiết và cập nhật đơn hàng"
+                    >
                       {/* Cột 1: Mã đơn & Bàn */}
                       <td>
                         <div className="ord-code-cell">
@@ -553,6 +548,7 @@ export default function OrdersPage() {
                           <select
                             className="ord-quick-status-select"
                             value={order.status}
+                            onClick={e => e.stopPropagation()}
                             onChange={e => handleOrderStatusChange(order.id, e.target.value)}
                             title="Đổi nhanh trạng thái"
                           >
@@ -566,23 +562,14 @@ export default function OrdersPage() {
                         </div>
                       </td>
 
-                      {/* Cột 6: Thao tác */}
+                      {/* Cột 6: Thao tác (Đã bỏ nút Chi tiết, bấm hàng để xem/sửa) */}
                       <td>
                         <div className="ord-action-buttons">
                           <button
                             type="button"
-                            className="ord-btn-action primary"
-                            onClick={() => {
-                              setSelectedOrder(order)
-                              setShowDetailModal(true)
-                            }}
-                          >
-                            Chi tiết
-                          </button>
-                          <button
-                            type="button"
                             className="ord-btn-action"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setSelectedOrder(order)
                               setShowBillModal(true)
                             }}
@@ -593,7 +580,10 @@ export default function OrdersPage() {
                           <button
                             type="button"
                             className="ord-btn-action danger"
-                            onClick={() => setDeleteConfirmId(order.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteConfirmId(order.id)
+                            }}
                             title="Xóa đơn"
                           >
                             Xóa
@@ -605,91 +595,6 @@ export default function OrdersPage() {
                 })}
               </tbody>
             </table>
-          </div>
-
-        ) : (
-
-          /* ── CARDS / GRID VIEW ────────────────────────────────── */
-          <div className="ord-cards-grid">
-            {paginatedOrders.map(order => {
-              const items = order.items || []
-              const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
-              return (
-                <div key={order.id} className="ord-card">
-                  {/* Card Head */}
-                  <div className="ord-card-head">
-                    <div className="ord-card-title-group">
-                      <span className="ord-card-id">#{order.id}</span>
-                      <span className="ord-card-table">Bàn {order.tableNumber || 'Mang đi'}</span>
-                    </div>
-                    <span className={`ord-badge ${cfg.cls}`}>{cfg.label}</span>
-                  </div>
-
-                  {/* Card Meta */}
-                  <div className="ord-card-meta">
-                    <span className="ord-card-time">{formatTimeOnly(order.createdAt)} · {formatDateOnly(order.createdAt)}</span>
-                    <span className="ord-card-ago">{getTimeAgo(order.createdAt)}</span>
-                  </div>
-
-                  {/* Card Items */}
-                  <div className="ord-card-items-list">
-                    {items.slice(0, 4).map((it, idx) => (
-                      <div key={idx} className="ord-card-item-row">
-                        <span className="ord-card-item-qty">{it.quantity}×</span>
-                        <span className="ord-card-item-name">{it.itemName || it.menuItemName || it.comboName}</span>
-                        <span className="ord-card-item-price">{formatCurrency(it.subtotal)}</span>
-                      </div>
-                    ))}
-                    {items.length > 4 && (
-                      <div className="ord-card-items-more">
-                        +{items.length - 4} món ăn khác...
-                      </div>
-                    )}
-                    {items.length === 0 && (
-                      <div className="ord-card-items-more">Chưa có món ăn nào</div>
-                    )}
-                  </div>
-
-                  {/* Note */}
-                  {order.note && (
-                    <div className="ord-card-note">
-                      <strong>Ghi chú:</strong> {order.note}
-                    </div>
-                  )}
-
-                  {/* Card Foot */}
-                  <div className="ord-card-foot">
-                    <div className="ord-card-total">
-                      <span className="label">Tổng cộng</span>
-                      <span className="val">{formatCurrency(order.totalAmount)}</span>
-                    </div>
-                    <div className="ord-card-actions">
-                      <button
-                        type="button"
-                        className="ord-btn-action primary"
-                        onClick={() => {
-                          setSelectedOrder(order)
-                          setShowDetailModal(true)
-                        }}
-                      >
-                        Chi tiết
-                      </button>
-                      <button
-                        type="button"
-                        className="ord-btn-action"
-                        onClick={() => {
-                          setSelectedOrder(order)
-                          setShowBillModal(true)
-                        }}
-                        title="In hóa đơn"
-                      >
-                        In bill
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
         )}
 

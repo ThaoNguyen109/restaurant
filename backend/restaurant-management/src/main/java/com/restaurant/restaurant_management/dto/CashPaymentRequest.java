@@ -30,6 +30,8 @@ public class CashPaymentRequest {
 
     private Integer discountPercent;
 
+    private String promotionCode;
+
     private String note;
 }
 

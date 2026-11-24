@@ -16,7 +16,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.88rem;
+  font-size: 0.94rem;
 }
 
 .data-table th {
@@ -24,7 +24,7 @@
   color: #6a7e71;
   font-weight: 600;
   border-bottom: 2px solid #f0f4f1;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -33,10 +33,20 @@
   padding: 14px;
   border-bottom: 1px solid #f4f6f3;
   color: #2c3e33;
+  font-size: 0.92rem;
 }
 
 .data-table tr:hover {
   background: #f9fbfa;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+  background-color: #f1f5f2 !important;
 }
 
 .order-id {
@@ -309,4 +319,449 @@
     padding: 4px 8px;
     font-size: 0.7rem;
   }
+}
+
+/* ================================================================
+   UNIFIED ADMIN TOOLBAR & FILTER SYSTEM
+   Consistent across Customers, Promotions, Orders, Reservations,
+   Tables, Menu, Employees, Inventory
+   ================================================================ */
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.admin-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  padding: 4px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(42, 71, 54, 0.08);
+  box-shadow: 0 2px 8px rgba(42, 71, 54, 0.02);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.admin-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.admin-tab-item:hover {
+  color: #1e3527;
+  background: #f8faf9;
+}
+
+.admin-tab-item.active {
+  background: #2a4736;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(42, 71, 54, 0.2);
+}
+
+.admin-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.admin-tab-item.active .admin-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.admin-tab-count.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.admin-tab-count.warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.admin-tab-count.danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.admin-tab-count.info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.admin-tab-count.vip {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+/* Right Toolbar Container */
+.admin-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Search Bar (Dài, Đẹp, Nổi Bật & Tinh Tế) */
+.admin-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 320px;
+  max-width: 760px;
+  flex: 1;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(42, 71, 54, 0.08);
+}
+
+.admin-search-bar.full-width {
+  max-width: 100%;
+}
+
+.admin-search-icon {
+  position: absolute;
+  left: 15px;
+  color: #2a4736;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 40px 0 44px;
+  border-radius: 12px;
+  border: 1.5px solid #2a4736;
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e3527;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(42, 71, 54, 0.06);
+}
+
+.admin-search-input:focus {
+  border-color: #1e3527;
+  background: #ffffff;
+  box-shadow: 0 0 0 3.5px rgba(42, 71, 54, 0.16), 0 4px 16px rgba(42, 71, 54, 0.12);
+}
+
+.admin-search-input::placeholder {
+  color: #8fa897;
+  font-size: 0.86rem;
+  font-weight: 400;
+}
+
+.admin-search-clear {
+  position: absolute;
+  right: 12px;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  font-size: 0.76rem;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.admin-search-clear:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+/* Dropdown Selects */
+.admin-filter-select {
+  height: 42px;
+  padding: 0 36px 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(42, 71, 54, 0.14);
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236a7e71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 0.86rem;
+  color: #1e3527;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(42, 71, 54, 0.03);
+}
+
+.admin-filter-select:focus {
+  border-color: #2a4736;
+  box-shadow: 0 0 0 3px rgba(42, 71, 54, 0.1);
+}
+
+/* Segmented Buttons (Date, View Toggle, etc.) */
+.admin-segmented-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffffff;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(42, 71, 54, 0.12);
+  box-shadow: 0 1px 4px rgba(42, 71, 54, 0.03);
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.admin-segmented-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.admin-segmented-btn:hover {
+  color: #1e3527;
+  background: #f8faf9;
+}
+
+.admin-segmented-btn.active {
+  background: #2a4736;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(42, 71, 54, 0.2);
+}
+
+.admin-date-picker {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(42, 71, 54, 0.14);
+  font-size: 0.8rem;
+  color: #1e3527;
+  background: #f8faf9;
+  outline: none;
+  font-family: inherit;
+}
+
+.admin-date-picker:focus {
+  border-color: #2a4736;
+  background: #ffffff;
+}
+
+/* Reset / Clear Filter Button */
+.admin-btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(216, 104, 136, 0.5);
+  background: #fff5f7;
+  color: #d86888;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.admin-btn-reset:hover {
+  background: #fce4ec;
+  border-color: #d86888;
+  color: #c2185b;
+}
+
+/* ================================================================
+   UNDERLINE TABS SYSTEM ("Dạng Tab" chuẩn thanh ngang)
+   ================================================================ */
+.admin-underline-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  padding: 0 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-underline-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-line-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.admin-line-tab:hover {
+  color: #1e3527;
+  border-bottom-color: rgba(42, 71, 54, 0.3);
+  background: rgba(42, 71, 54, 0.03);
+  border-radius: 6px 6px 0 0;
+}
+
+.admin-line-tab.active {
+  color: #2a4736;
+  font-weight: 700;
+  border-bottom-color: #2a4736;
+  background: transparent;
+}
+
+.admin-line-tab .admin-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.admin-line-tab.active .admin-tab-count {
+  background: #2a4736;
+  color: #ffffff;
+}
+
+.admin-line-tab.active .admin-tab-count.warning {
+  background: #b45309;
+  color: #ffffff;
+}
+
+.admin-line-tab.active .admin-tab-count.danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.admin-line-tab.active .admin-tab-count.info {
+  background: #0369a1;
+  color: #ffffff;
+}
+
+/* ================================================================
+   SEARCH BAR NỔI BẬT & DATE RANGE ("Từ ngày đến ngày")
+   ================================================================ */
+.admin-search-bar.prominent {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(42, 71, 54, 0.08);
+}
+
+.admin-search-bar.prominent .admin-search-input {
+  border: 1.5px solid #2a4736;
+  background: #ffffff;
+  color: #1e3527;
+  font-weight: 500;
+  font-size: 0.88rem;
+  box-shadow: 0 1px 4px rgba(42, 71, 54, 0.06);
+}
+
+.admin-search-bar.prominent .admin-search-input:focus {
+  border-color: #1e3527;
+  box-shadow: 0 0 0 3.5px rgba(42, 71, 54, 0.16), 0 4px 16px rgba(42, 71, 54, 0.12);
+}
+
+.admin-search-bar.prominent .admin-search-icon {
+  color: #2a4736;
+}
+
+/* Date Range Container */
+.admin-date-range-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(42, 71, 54, 0.16);
+  box-shadow: 0 1px 4px rgba(42, 71, 54, 0.04);
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.admin-date-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-date-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.admin-date-arrow {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
 }

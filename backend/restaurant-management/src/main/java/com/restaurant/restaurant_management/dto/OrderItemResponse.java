@@ -1,6 +1,7 @@
 package com.restaurant.restaurant_management.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class OrderItemResponse {
 
@@ -16,6 +17,7 @@ public class OrderItemResponse {
     private Long comboId;
     private String comboName;
     private String comboImage;
+    private List<ComboItemResponse> comboItems; // Danh sách món trong combo
 
     // Display name & type helper
     private String itemName;
@@ -121,6 +123,14 @@ public class OrderItemResponse {
         this.comboImage = comboImage;
     }
 
+    public List<ComboItemResponse> getComboItems() {
+        return comboItems;
+    }
+
+    public void setComboItems(List<ComboItemResponse> comboItems) {
+        this.comboItems = comboItems;
+    }
+
     public String getItemName() {
         return itemName;
     }
@@ -194,6 +204,7 @@ public class OrderItemResponse {
         private Long comboId;
         private String comboName;
         private String comboImage;
+        private List<ComboItemResponse> comboItems;
         private String itemName;
         private String itemType;
         private String image;
@@ -243,6 +254,11 @@ public class OrderItemResponse {
             return this;
         }
 
+        public OrderItemResponseBuilder comboItems(List<ComboItemResponse> comboItems) {
+            this.comboItems = comboItems;
+            return this;
+        }
+
         public OrderItemResponseBuilder itemName(String itemName) {
             this.itemName = itemName;
             return this;
@@ -284,8 +300,10 @@ public class OrderItemResponse {
         }
 
         public OrderItemResponse build() {
-            return new OrderItemResponse(id, orderId, menuItemId, menuItemName, menuItemImage, comboId, comboName,
+            OrderItemResponse resp = new OrderItemResponse(id, orderId, menuItemId, menuItemName, menuItemImage, comboId, comboName,
                     comboImage, itemName, itemType, image, quantity, unitPrice, subtotal, status, note);
+            resp.setComboItems(comboItems);
+            return resp;
         }
     }
 }

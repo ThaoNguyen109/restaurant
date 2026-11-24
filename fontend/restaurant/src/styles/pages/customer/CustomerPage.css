@@ -1,59 +1,64 @@
 /* ============================================================
    CustomerPage.css – HOA SEN RESTAURANT
-   Theme: Luminous Lotus (Hồng Sen #d86888 × Sáng Trong & Thanh Thoát)
-   Thiết kế sáng, thanh lịch, sang trọng, không bị che lệch
+   Theme: Lotus Harmony (Lá Sen Ngọc #2d6a4f × Hồng Sen #d86888)
+   Thiết kế sáng, thanh khiết, sang trọng, hài hòa xanh và hồng
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
 
 /* ══════════════════════════════════════════════
-   DESIGN TOKENS (HỒNG SEN #d86888 + NỀN SÁNG THANH NHÃ)
+   DESIGN TOKENS (LÁ SEN NGỌC #2d6a4f + HỒNG SEN #d86888)
 ══════════════════════════════════════════════ */
 :root {
-  /* Hồng Sen Chủ Đạo */
-  --rose:               #d86888;
-  --rose-light:         #f4a7bc;
-  --rose-soft:          #fdf2f5;
-  --rose-mist:          #fff5f8;
-  --rose-dark:          #b84d6e;
-  --rose-deep:          #8a324e;
-  --rose-glow:          rgba(216, 104, 136, 0.22);
-  --rose-tint:          rgba(216, 104, 136, 0.08);
+  /* Xanh Lá Sen / Ngọc Bích Hồ Tây (Chủ đạo thanh mát tự nhiên) */
+  --leaf-primary: #2d6a4f;
+  --leaf-dark: #1b4332;
+  --leaf-hover: #245741;
+  --leaf-medium: #3b7a57;
+  --leaf-light: #529471;
+  --leaf-soft: #edf7f2;
+  --leaf-mint: #e2f0e8;
+  --leaf-border: rgba(45, 106, 79, 0.2);
+  --leaf-glow: rgba(45, 106, 79, 0.25);
 
-  /* Xanh Lá Sen / Ngọc Bích Hồ Tây Điểm Xuyết */
-  --leaf-accent:        #3b7a57;
-  --leaf-light:         #5a9c78;
-  --leaf-mint:          #eaf4ee;
-  --leaf-border:        rgba(59, 122, 87, 0.2);
+  /* Hồng Sen Tây Hồ (Điểm xuyết cánh hoa nở rộ) */
+  --rose: #d86888;
+  --rose-light: #f4a7bc;
+  --rose-soft: #fdf2f5;
+  --rose-mist: #fff8fa;
+  --rose-dark: #b84d6e;
+  --rose-deep: #8a324e;
+  --rose-glow: rgba(216, 104, 136, 0.22);
+  --rose-tint: rgba(216, 104, 136, 0.08);
 
   /* Nền Sáng Trong & Thanh Thoát */
-  --bg-page:            #faf9f7;
-  --bg-white:           #ffffff;
-  --bg-card:            #ffffff;
-  --bg-subtle:          #fbf8fa;
+  --bg-page: #f9fbf9;
+  --bg-white: #ffffff;
+  --bg-card: #ffffff;
+  --bg-subtle: #f2f8f4;
 
   /* Typography Sắc Nét */
-  --text-title:         #1a2420;
-  --text-body:          #374151;
-  --text-muted:         #6b7280;
-  --text-light:         #9ca3af;
+  --text-title: #1a2420;
+  --text-body: #374151;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
 
   /* Đường Viền & Bóng Đổ */
-  --border-light:       rgba(216, 104, 136, 0.16);
-  --border-focus:       rgba(216, 104, 136, 0.45);
-  --shadow-sm:          0 2px 10px rgba(0, 0, 0, 0.03);
-  --shadow-md:          0 10px 30px rgba(216, 104, 136, 0.08);
-  --shadow-hover:       0 16px 36px rgba(216, 104, 136, 0.16);
+  --border-light: rgba(45, 106, 79, 0.15);
+  --border-focus: rgba(45, 106, 79, 0.45);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 30px rgba(45, 106, 79, 0.08);
+  --shadow-hover: 0 16px 36px rgba(45, 106, 79, 0.16);
 
   /* Bo Góc & Layout */
-  --radius-sm:          10px;
-  --radius:             16px;
-  --radius-lg:          24px;
-  --radius-full:        9999px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
 
   /* Chuyển Động */
-  --ease:               cubic-bezier(0.16, 1, 0.3, 1);
-  --t:                  0.3s var(--ease);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t: 0.3s var(--ease);
 }
 
 /* ══════════════════════════════════════════════
@@ -80,7 +85,7 @@
 }
 
 /* ══════════════════════════════════════════════
-   NAVBAR (Cố định, không che lệch)
+   NAVBAR (Cố định, sắc nét, thanh thoát)
 ══════════════════════════════════════════════ */
 .cp-navbar {
   position: fixed;
@@ -93,7 +98,7 @@
   justify-content: space-between;
   padding: 0 48px;
   height: 76px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
@@ -103,8 +108,8 @@
 
 .cp-navbar.scrolled {
   height: 68px;
-  box-shadow: 0 6px 24px rgba(216, 104, 136, 0.1);
-  border-bottom-color: rgba(216, 104, 136, 0.25);
+  box-shadow: 0 6px 24px rgba(45, 106, 79, 0.1);
+  border-bottom-color: rgba(45, 106, 79, 0.25);
 }
 
 .cp-nav-logo {
@@ -122,7 +127,7 @@
 }
 
 .cp-lotus-svg {
-  filter: drop-shadow(0 2px 6px rgba(216, 104, 136, 0.35));
+  filter: drop-shadow(0 2px 6px rgba(45, 106, 79, 0.3));
   transition: transform var(--t);
 }
 
@@ -140,14 +145,14 @@
   font-family: 'Playfair Display', serif;
   font-size: 21px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
   letter-spacing: 0.02em;
 }
 
 .cp-nav-logo-text small {
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--leaf-accent);
+  color: var(--rose);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -170,24 +175,25 @@
 }
 
 .cp-nav-links a:hover {
-  color: var(--rose);
-  background: var(--rose-soft);
+  color: var(--leaf-primary);
+  background: var(--leaf-soft);
 }
 
 .cp-nav-cta {
-  background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%) !important;
+  background: linear-gradient(135deg, var(--leaf-primary) 0%, #3e8865 100%) !important;
   color: #fff !important;
   padding: 10px 24px !important;
   border-radius: var(--radius-full) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
-  box-shadow: 0 4px 14px rgba(216, 104, 136, 0.32) !important;
+  box-shadow: 0 4px 14px var(--leaf-glow) !important;
   transition: var(--t) !important;
 }
 
 .cp-nav-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(216, 104, 136, 0.48) !important;
+  box-shadow: 0 6px 20px rgba(45, 106, 79, 0.45) !important;
+  background: linear-gradient(135deg, #245741 0%, var(--leaf-primary) 100%) !important;
   color: #fff !important;
 }
 
@@ -198,8 +204,8 @@
   align-items: center;
   gap: 5px;
   cursor: pointer;
-  background: var(--rose-soft);
-  border: 1px solid var(--border-light);
+  background: var(--leaf-soft);
+  border: 1px solid var(--leaf-border);
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
@@ -210,13 +216,13 @@
   display: block;
   width: 20px;
   height: 2px;
-  background: var(--rose);
+  background: var(--leaf-primary);
   border-radius: 2px;
   transition: var(--t);
 }
 
 /* ══════════════════════════════════════
-   HERO SECTION (Đẹp, thoáng đãng, không bị che)
+   HERO SECTION (Đẹp, thoáng đãng, sắc lá sen)
 ══════════════════════════════════════ */
 .cp-hero {
   position: relative;
@@ -242,8 +248,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 90% 80% at 50% 30%, rgba(255, 245, 248, 0.85), rgba(250, 249, 247, 0.95)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(250, 249, 247, 0.98) 100%);
+    radial-gradient(ellipse 90% 80% at 50% 30%, rgba(244, 250, 246, 0.88), rgba(249, 251, 249, 0.96)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(249, 251, 249, 0.98) 100%);
 }
 
 .cp-hero-content {
@@ -260,13 +266,13 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--rose-soft);
-  border: 1px solid rgba(216, 104, 136, 0.28);
+  background: var(--leaf-soft);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius-full);
   padding: 8px 24px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--rose);
+  color: var(--leaf-primary);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: 24px;
@@ -277,12 +283,22 @@
   height: 8px;
   border-radius: 50%;
   background: var(--rose);
+  box-shadow: 0 0 8px rgba(216, 104, 136, 0.6);
   animation: pulseDot 2s infinite ease-in-out;
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 0.5; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.2); }
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .cp-hero h1 {
@@ -302,8 +318,8 @@
 
 .cp-hero-subtitle {
   font-size: clamp(16px, 2.2vw, 21px);
-  color: var(--leaf-accent);
-  font-weight: 500;
+  color: var(--leaf-primary);
+  font-weight: 600;
   margin-bottom: 16px;
 }
 
@@ -326,9 +342,9 @@
 .cp-hero-tag {
   font-size: 13.5px;
   font-weight: 500;
-  color: var(--text-body);
+  color: var(--leaf-dark);
   background: #ffffff;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   padding: 7px 18px;
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
@@ -342,14 +358,14 @@
 }
 
 /* ══════════════════════════════════════
-   BUTTONS (Sắc sảo, không bị chói)
+   BUTTONS (Sắc xanh lá sen chủ đạo, điểm hồng sen)
 ══════════════════════════════════════ */
 .cp-btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+  background: linear-gradient(135deg, var(--leaf-primary) 0%, #3e8865 100%);
   color: #fff;
   border: none;
   padding: 14px 34px;
@@ -358,15 +374,15 @@
   font-weight: 600;
   cursor: pointer;
   transition: var(--t);
-  box-shadow: 0 6px 20px rgba(216, 104, 136, 0.35);
+  box-shadow: 0 6px 20px var(--leaf-glow);
   text-decoration: none;
   font-family: inherit;
 }
 
 .cp-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(216, 104, 136, 0.5);
-  background: linear-gradient(135deg, #e47596 0%, var(--rose) 100%);
+  box-shadow: 0 10px 28px rgba(45, 106, 79, 0.45);
+  background: linear-gradient(135deg, #245741 0%, var(--leaf-primary) 100%);
   color: #fff;
 }
 
@@ -391,6 +407,8 @@
 
 .cp-btn-secondary:hover {
   background: var(--rose-soft);
+  color: var(--rose-dark);
+  border-color: var(--rose-dark);
   transform: translateY(-2px);
 }
 
@@ -409,7 +427,7 @@
 
 .cp-stat-box {
   background: #ffffff;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   padding: 28px 20px;
   text-align: center;
@@ -419,7 +437,7 @@
 
 .cp-stat-box:hover {
   transform: translateY(-4px);
-  border-color: var(--border-focus);
+  border-color: var(--leaf-primary);
   box-shadow: var(--shadow-hover);
 }
 
@@ -427,7 +445,7 @@
   font-family: 'Playfair Display', serif;
   font-size: 36px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
   line-height: 1.1;
   margin-bottom: 6px;
 }
@@ -455,9 +473,9 @@
 
 .cp-section-tag {
   display: inline-block;
-  background: var(--rose-soft);
-  border: 1px solid rgba(216, 104, 136, 0.25);
-  color: var(--rose);
+  background: var(--leaf-soft);
+  border: 1px solid var(--leaf-border);
+  color: var(--leaf-primary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -477,9 +495,9 @@
 }
 
 .cp-section-divider {
-  width: 50px;
-  height: 2px;
-  background: var(--rose);
+  width: 54px;
+  height: 2.5px;
+  background: linear-gradient(90deg, var(--leaf-primary) 0%, var(--rose) 100%);
   margin: 0 auto 16px;
   border-radius: 2px;
 }
@@ -539,7 +557,7 @@
 
 .cp-pillar-item {
   background: var(--bg-subtle);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius-sm);
   padding: 18px;
   transition: var(--t);
@@ -547,7 +565,7 @@
 
 .cp-pillar-item:hover {
   background: #ffffff;
-  border-color: var(--rose);
+  border-color: var(--leaf-primary);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
@@ -561,9 +579,9 @@
 
 .cp-pillar-num {
   font-family: 'Playfair Display', serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
 }
 
 .cp-pillar-header h4 {
@@ -590,7 +608,7 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
 }
 
 .cp-about-img {
@@ -610,7 +628,7 @@
   top: 20px;
   left: 20px;
   background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius-sm);
   padding: 12px 18px;
   backdrop-filter: blur(10px);
@@ -623,21 +641,21 @@
   font-family: 'Playfair Display', serif;
   font-size: 24px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
   line-height: 1;
 }
 
 .cp-about-badge-lbl {
   font-size: 11px;
   font-weight: 600;
-  color: var(--leaf-accent);
+  color: var(--rose);
   text-transform: uppercase;
   margin-top: 3px;
 }
 
 .cp-about-quote-box {
-  background: var(--rose-soft);
-  border-left: 3px solid var(--rose);
+  background: var(--leaf-soft);
+  border-left: 3.5px solid var(--leaf-primary);
   border-radius: 0 12px 12px 0;
   padding: 16px 20px;
 }
@@ -652,8 +670,8 @@
 
 .cp-about-quote-box small {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--rose);
+  font-weight: 700;
+  color: var(--leaf-primary);
   text-transform: uppercase;
 }
 
@@ -673,7 +691,7 @@
 
 .cp-exp-card {
   background: #ffffff;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   padding: 26px 22px;
   display: flex;
@@ -685,14 +703,14 @@
 
 .cp-exp-card:hover {
   transform: translateY(-5px);
-  border-color: var(--rose);
+  border-color: var(--leaf-primary);
   box-shadow: var(--shadow-hover);
 }
 
 .cp-exp-tag {
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 10px;
@@ -720,12 +738,12 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 14px;
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid #f0f4f1;
 }
 
 .cp-exp-time {
   font-size: 12px;
-  color: var(--leaf-accent);
+  color: var(--leaf-light);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -738,13 +756,13 @@
   gap: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--rose);
+  color: var(--leaf-primary);
   text-decoration: none;
   transition: var(--t);
 }
 
 .cp-exp-link:hover {
-  color: var(--rose-dark);
+  color: var(--rose);
   transform: translateX(3px);
 }
 
@@ -768,7 +786,7 @@
 
 .cp-tab-btn {
   background: var(--bg-page);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   color: var(--text-body);
   font-size: 13.5px;
   font-weight: 600;
@@ -780,16 +798,16 @@
 }
 
 .cp-tab-btn:hover {
-  background: var(--rose-soft);
-  color: var(--rose);
-  border-color: var(--rose);
+  background: var(--leaf-soft);
+  color: var(--leaf-primary);
+  border-color: var(--leaf-primary);
 }
 
 .cp-tab-btn.active {
-  background: var(--rose);
+  background: var(--leaf-primary);
   color: #ffffff;
-  border-color: var(--rose);
-  box-shadow: 0 4px 14px rgba(216, 104, 136, 0.35);
+  border-color: var(--leaf-primary);
+  box-shadow: 0 4px 14px var(--leaf-glow);
 }
 
 /* Loading & Empty */
@@ -802,15 +820,17 @@
 .cp-menu-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--rose-soft);
-  border-top-color: var(--rose);
+  border: 3px solid var(--leaf-soft);
+  border-top-color: var(--leaf-primary);
   border-radius: 50%;
   margin: 0 auto 16px;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Dishes Grid */
@@ -823,7 +843,7 @@
 
 .cp-dish-item {
   background: #ffffff;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
@@ -835,7 +855,7 @@
 
 .cp-dish-item:hover {
   transform: translateY(-6px);
-  border-color: var(--rose);
+  border-color: var(--leaf-primary);
   box-shadow: var(--shadow-hover);
 }
 
@@ -862,8 +882,8 @@
   top: 12px;
   left: 12px;
   background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--border-light);
-  color: var(--rose);
+  border: 1px solid var(--leaf-border);
+  color: var(--leaf-primary);
   font-size: 11px;
   font-weight: 700;
   padding: 4px 12px;
@@ -892,7 +912,7 @@
 
 .cp-dish-ingr {
   font-size: 12px;
-  color: var(--leaf-accent);
+  color: var(--leaf-medium);
   margin-bottom: 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -927,9 +947,9 @@
 }
 
 .cp-dish-action-btn {
-  background: var(--rose-soft);
-  color: var(--rose);
-  border: 1px solid rgba(216, 104, 136, 0.3);
+  background: var(--leaf-soft);
+  color: var(--leaf-primary);
+  border: 1px solid var(--leaf-border);
   padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 12.5px;
@@ -939,15 +959,15 @@
 }
 
 .cp-dish-action-btn:hover {
-  background: var(--rose);
+  background: var(--leaf-primary);
   color: #fff;
-  border-color: var(--rose);
+  border-color: var(--leaf-primary);
 }
 
 /* Menu CTA Bottom Bar */
 .cp-menu-cta-bar {
-  background: linear-gradient(135deg, #fff2f6 0%, #fbf8fa 100%);
-  border: 1px solid var(--border-light);
+  background: linear-gradient(135deg, #f0f7f3 0%, #ffffff 100%);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   padding: 28px 36px;
   display: flex;
@@ -986,7 +1006,7 @@
 
 .cp-craft-card {
   background: #ffffff;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   padding: 32px 28px;
   box-shadow: var(--shadow-md);
@@ -996,7 +1016,7 @@
 
 .cp-craft-card:hover {
   transform: translateY(-4px);
-  border-color: var(--rose);
+  border-color: var(--leaf-primary);
   box-shadow: var(--shadow-hover);
 }
 
@@ -1010,14 +1030,14 @@
   font-family: 'Playfair Display', serif;
   font-size: 42px;
   font-weight: 700;
-  color: var(--rose);
+  color: var(--leaf-primary);
   line-height: 1;
 }
 
 .cp-craft-unit {
   font-size: 13px;
   font-weight: 600;
-  color: var(--leaf-accent);
+  color: var(--rose);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-top: 4px;
@@ -1038,18 +1058,18 @@
 }
 
 /* ══════════════════════════════════════
-   RESERVATION BANNER (Thanh lịch & Tách form)
+   RESERVATION BANNER (Xanh ngọc Tây Hồ sang trọng)
 ══════════════════════════════════════ */
 .cp-book-banner-section {
   padding: 40px 0 84px;
 }
 
 .cp-book-banner {
-  background: linear-gradient(135deg, #1c2b22 0%, #111e17 100%);
+  background: linear-gradient(135deg, #1b4332 0%, #245741 50%, #1e4635 100%);
   color: #ffffff;
   border-radius: var(--radius-lg);
   padding: 56px 48px;
-  box-shadow: 0 16px 48px rgba(17, 30, 23, 0.25);
+  box-shadow: 0 16px 48px rgba(27, 67, 50, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -1059,9 +1079,9 @@
   position: absolute;
   top: -50px;
   right: -50px;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(216, 104, 136, 0.25) 0%, transparent 70%);
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(216, 104, 136, 0.35) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -1073,9 +1093,9 @@
 
 .cp-book-tag {
   display: inline-block;
-  background: rgba(216, 104, 136, 0.2);
-  border: 1px solid rgba(216, 104, 136, 0.4);
-  color: #f4a7bc;
+  background: rgba(216, 104, 136, 0.22);
+  border: 1px solid rgba(216, 104, 136, 0.45);
+  color: #fce7ef;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1096,7 +1116,7 @@
 
 .cp-book-banner-content p {
   font-size: 15px;
-  color: #c4d6cb;
+  color: #d1ead7;
   line-height: 1.7;
   margin-bottom: 24px;
 }
@@ -1106,7 +1126,7 @@
   flex-wrap: wrap;
   gap: 16px;
   font-size: 13.5px;
-  color: #a3cca9;
+  color: #bce3c5;
   font-weight: 500;
   margin-bottom: 32px;
 }
@@ -1155,7 +1175,7 @@
 
 .cp-review-card {
   background: var(--bg-subtle);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--leaf-border);
   border-radius: var(--radius);
   padding: 28px 24px;
   box-shadow: var(--shadow-sm);
@@ -1188,7 +1208,7 @@
 
 .cp-review-author span {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--leaf-light);
 }
 
 /* ══════════════════════════════════════
@@ -1224,9 +1244,9 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--rose-soft);
-  border: 1px solid var(--border-light);
-  color: var(--rose);
+  background: var(--leaf-soft);
+  border: 1px solid var(--leaf-border);
+  color: var(--leaf-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1237,7 +1257,7 @@
 }
 
 .cp-footer-social a:hover {
-  background: var(--rose);
+  background: var(--leaf-primary);
   color: #fff;
   transform: translateY(-2px);
 }
@@ -1257,9 +1277,9 @@
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 24px;
+  width: 28px;
   height: 2px;
-  background: var(--rose);
+  background: linear-gradient(90deg, var(--leaf-primary), var(--rose));
 }
 
 .cp-footer-col ul {
@@ -1277,7 +1297,7 @@
 }
 
 .cp-footer-col ul li a:hover {
-  color: var(--rose);
+  color: var(--leaf-primary);
   transform: translateX(3px);
 }
 
@@ -1311,9 +1331,11 @@
   .cp-dishes-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .cp-exp-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .cp-footer-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 36px;
@@ -1324,16 +1346,20 @@
   .cp-navbar {
     padding: 0 20px;
   }
+
   .cp-about-grid {
     grid-template-columns: 1fr;
     gap: 40px;
   }
+
   .cp-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .cp-craft-grid {
     grid-template-columns: 1fr;
   }
+
   .cp-reviews-grid {
     grid-template-columns: 1fr;
   }
@@ -1343,6 +1369,7 @@
   .cp-nav-hamburger {
     display: flex;
   }
+
   .cp-nav-links {
     display: none;
     position: fixed;
@@ -1356,33 +1383,42 @@
     border-bottom: 1px solid var(--border-light);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
   }
+
   .cp-nav-links.open {
     display: flex;
   }
+
   .cp-nav-links a {
     width: 100%;
     text-align: center;
     padding: 12px;
   }
+
   .cp-stats-grid {
     grid-template-columns: 1fr;
   }
+
   .cp-dishes-grid {
     grid-template-columns: 1fr;
   }
+
   .cp-exp-grid {
     grid-template-columns: 1fr;
   }
+
   .cp-pillars-grid {
     grid-template-columns: 1fr;
   }
+
   .cp-book-banner {
     padding: 36px 24px;
   }
+
   .cp-footer-grid {
     grid-template-columns: 1fr;
     gap: 28px;
   }
+
   .cp-footer-bottom {
     flex-direction: column;
     text-align: center;

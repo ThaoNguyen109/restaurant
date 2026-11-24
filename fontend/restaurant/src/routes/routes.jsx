@@ -9,6 +9,8 @@ import ReportsPage from '../pages/admin/ReportsPage'
 import SettingsPage from '../pages/admin/SettingsPage'
 import TablesPage from '../pages/admin/TablesPage'
 import ReservationsPage from '../pages/admin/ReservationsPage'
+import PromotionsPage from '../pages/admin/PromotionsPage'
+import CustomersPage from '../pages/admin/CustomersPage'
 import ManagerDashboard from '../pages/manager/ManagerDashboard'
 import StaffDashboard from '../pages/staff/StaffDashboard'
 import KitchenPage from '../pages/staff/KitchenPage'
@@ -16,6 +18,7 @@ import CashierPage from '../pages/staff/CashierPage'
 import CustomerPage from '../pages/customer/CustomerPage'
 import CustomerMenuPage from '../pages/customer/CustomerMenuPage'
 import CustomerReservationPage from '../pages/customer/CustomerReservationPage'
+import CustomerOrderPage from '../pages/customer/CustomerOrderPage'
 import StaffReservationsPage from '../pages/staff/StaffReservationsPage'
 import VNPayReturnPage from '../pages/payment/VNPayReturnPage'
 import ProtectedRoute from '../components/ProtectedRoute'
@@ -34,6 +37,22 @@ export const router = createBrowserRouter([
   },
 
   // ── Trang khách hàng (public – không cần đăng nhập) ──────────────
+  {
+    path: '/order',
+    element: <CustomerOrderPage />,
+  },
+  {
+    path: '/order/:tableId',
+    element: <CustomerOrderPage />,
+  },
+  {
+    path: '/customer/order',
+    element: <CustomerOrderPage />,
+  },
+  {
+    path: '/table/:tableId/order',
+    element: <CustomerOrderPage />,
+  },
   {
     path: '/menu',
     element: <CustomerMenuPage />,
@@ -116,7 +135,7 @@ export const router = createBrowserRouter([
     path: '/admin/reports',
     element: (
       <ProtectedRoute allowedRoles={['ADMIN']}>
-        <ReportsPage />
+        <AdminDashboard />
       </ProtectedRoute>
     ),
   },
@@ -125,6 +144,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={['ADMIN']}>
         <SettingsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/promotions',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+        <PromotionsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/customers',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+        <CustomersPage />
       </ProtectedRoute>
     ),
   },

@@ -1,0 +1,521 @@
+/* ================================================================
+   CUSTOMERS ADMIN PAGE — Synchronized with Lotus Admin System
+   No bulky stat cards, clean data-table, inline non-wrapping actions
+   ================================================================ */
+
+.cust-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Control Panel (Tabs & Search) ────────────────────────────── */
+.cust-ctrl-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Status & Tier Filter Tabs */
+.cust-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  padding: 4px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(42, 71, 54, 0.08);
+  box-shadow: 0 2px 8px rgba(42, 71, 54, 0.02);
+}
+
+.cust-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.cust-tab-item:hover {
+  color: #1e3527;
+  background: #f8faf9;
+}
+
+.cust-tab-item.active {
+  background: #2a4736;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(42, 71, 54, 0.2);
+}
+
+.cust-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cust-tab-item.active .cust-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.cust-tab-count.warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.cust-tab-count.vip {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+/* Search Bar */
+.cust-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.cust-search-bar input {
+  width: 100%;
+  padding: 8px 32px 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(42, 71, 54, 0.12);
+  background: #ffffff;
+  font-size: 0.82rem;
+  color: #1e3527;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.cust-search-bar input:focus {
+  border-color: #2a4736;
+  box-shadow: 0 0 0 3px rgba(42, 71, 54, 0.08);
+}
+
+.cust-search-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+/* ── Table Card & Responsive Scroll ──────────────────────────── */
+.cust-table-card {
+  padding: 18px 20px;
+  overflow: hidden;
+}
+
+.cust-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cust-table-scroll .data-table th {
+  padding: 12px 12px;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.cust-table-scroll .data-table td {
+  padding: 12px 12px;
+  font-size: 0.92rem;
+}
+
+/* ── Table Columns & Cells ────────────────────────────────────── */
+.cust-col-code {
+  font-weight: 600;
+  color: #94a3b8;
+  font-size: 0.86rem;
+}
+
+.cust-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cust-full-name {
+  color: #1e3527;
+  font-size: 0.96rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cust-full-name:hover {
+  color: #2a4736;
+  text-decoration: underline;
+}
+
+.cust-sub-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #64748b;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.cust-tag-gender {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.cust-text-muted {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.cust-contact-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cust-phone-num {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.cust-email-str {
+  color: #64748b;
+  font-size: 0.78rem;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cust-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cust-points-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cust-points-num {
+  color: #b45309;
+  font-size: 0.96rem;
+}
+
+.cust-add-pts-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #fde68a;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.cust-add-pts-btn:hover {
+  background: #fde68a;
+  transform: scale(1.15);
+}
+
+.cust-visits-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.73rem;
+  font-weight: 500;
+}
+
+/* ── ACTION BUTTONS ROW (KHÔNG BAO GIỜ BỊ XUỐNG DÒNG) ─────────── */
+.cust-tbl-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.cust-tbl-actions .action-btn {
+  padding: 4px 8px;
+  font-size: 0.73rem;
+  margin-right: 0;
+  border-radius: 6px;
+}
+
+.cust-empty-cell {
+  text-align: center;
+  padding: 40px 16px;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.cust-inline-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #2a4736;
+  border-radius: 50%;
+  animation: spinCust 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes spinCust {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Pagination ───────────────────────────────────────────────── */
+.cust-pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 6px 0;
+  margin-top: 12px;
+  border-top: 1px solid #f0f4f1;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.cust-pagination-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cust-page-nav-btn {
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+.cust-page-nav-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+.cust-page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cust-page-current {
+  font-weight: 600;
+  color: #1e3527;
+}
+
+/* ── Detail Modal Specifics ───────────────────────────────────── */
+.cust-detail-card {
+  max-width: 620px;
+}
+
+.cust-detail-head-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cust-detail-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #2a4736;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.cust-detail-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.cust-detail-body {
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cust-metric-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.cust-metric-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cust-metric-box span {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+.cust-metric-box strong {
+  font-size: 0.95rem;
+  color: #1e3527;
+}
+
+.cust-detail-section h4 {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: #1e3527;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+}
+
+.cust-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+.cust-info-grid .lbl {
+  color: #64748b;
+  margin-right: 6px;
+}
+
+.cust-note-box {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 3px 0 0;
+  color: #92400e;
+  font-size: 0.78rem;
+}
+
+.cust-section-title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.cust-section-title-bar h4 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.cust-empty-sub {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.cust-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.cust-ord-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.cust-ord-time {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.cust-ord-amount {
+  font-weight: 700;
+  color: #1e3527;
+}
+
+/* Points Preview */
+.cust-pts-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fffbeb;
+  border: 1px solid #fef08a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #b45309;
+  font-size: 0.82rem;
+  margin-top: 10px;
+}
+.cust-pts-preview strong {
+  font-size: 1rem;
+}
+
+.cust-form-alert {
+  margin: 14px 24px 0;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-left: 3px solid #ef4444;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  border-radius: 4px;
+}

@@ -18,6 +18,9 @@ public class VNPayPaymentRequest {
     // Tuỳ chọn: ghi chú hoặc returnUrl tuỳ chỉnh
     private String orderInfo;
 
+    // Tuỳ chọn: URL chuyển hướng sau khi thanh toán xong (đặc biệt khi gọi từ điện thoại qua mạng LAN)
+    private String returnUrl;
+
     public VNPayPaymentRequest() {
     }
 
@@ -26,6 +29,14 @@ public class VNPayPaymentRequest {
         this.amount = amount;
         this.bankCode = bankCode;
         this.orderInfo = orderInfo;
+    }
+
+    public VNPayPaymentRequest(Long orderId, BigDecimal amount, String bankCode, String orderInfo, String returnUrl) {
+        this.orderId = orderId;
+        this.amount = amount;
+        this.bankCode = bankCode;
+        this.orderInfo = orderInfo;
+        this.returnUrl = returnUrl;
     }
 
     public static VNPayPaymentRequestBuilder builder() {
@@ -62,6 +73,14 @@ public class VNPayPaymentRequest {
 
     public void setOrderInfo(String orderInfo) {
         this.orderInfo = orderInfo;
+    }
+
+    public String getReturnUrl() {
+        return returnUrl;
+    }
+
+    public void setReturnUrl(String returnUrl) {
+        this.returnUrl = returnUrl;
     }
 
     public static class VNPayPaymentRequestBuilder {

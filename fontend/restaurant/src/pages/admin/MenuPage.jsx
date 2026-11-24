@@ -39,6 +39,10 @@ function MenuPage() {
   const [filterComboStatus, setFilterComboStatus] = useState('')
   const [searchComboKeyword, setSearchComboKeyword] = useState('')
 
+  // Bộ lọc Danh mục
+  const [filterCategoryStatus, setFilterCategoryStatus] = useState('')
+  const [searchCategoryKeyword, setSearchCategoryKeyword] = useState('')
+
   // Toast thông báo
   const [toast, setToast] = useState(null)
 
@@ -510,6 +514,7 @@ function MenuPage() {
   const totalItems = menuItems.length
   const activeCount = menuItems.filter((i) => i.status === 'ACTIVE' || !i.status).length
   const totalCategories = categories.length
+  const activeCategoriesCount = categories.filter((c) => c.status === 'ACTIVE' || !c.status).length
   const totalCombos = combos.length
   const activeCombosCount = combos.filter((c) => c.status === 'ACTIVE' || !c.status).length
 
@@ -522,6 +527,18 @@ function MenuPage() {
       !searchComboKeyword ||
       c.name.toLowerCase().includes(searchComboKeyword.toLowerCase()) ||
       (c.description && c.description.toLowerCase().includes(searchComboKeyword.toLowerCase()))
+    return matchStatus && matchSearch
+  })
+
+  // Lọc danh mục ở giao diện
+  const filteredCategories = categories.filter((c) => {
+    const matchStatus =
+      !filterCategoryStatus ||
+      (filterCategoryStatus === 'ACTIVE' ? c.status !== 'INACTIVE' : c.status === 'INACTIVE')
+    const matchSearch =
+      !searchCategoryKeyword ||
+      c.name.toLowerCase().includes(searchCategoryKeyword.toLowerCase()) ||
+      (c.description && c.description.toLowerCase().includes(searchCategoryKeyword.toLowerCase()))
     return matchStatus && matchSearch
   })
 
@@ -1234,72 +1251,69 @@ function MenuPage() {
         {viewMode === 'list' && (
           <>
             {/* TABS CHUYỂN ĐỔI */}
-            <div className="menu-tabs">
+            <div className="admin-tabs" style={{ marginBottom: 16 }}>
               <button
-                className={`menu-tab-btn ${activeTab === 'items' ? 'active' : ''}`}
+                type="button"
+                className={`admin-tab-item ${activeTab === 'items' ? 'active' : ''}`}
                 onClick={() => setActiveTab('items')}
               >
                 <span>Danh sách món ăn</span>
-                <span className="tab-badge">{totalItems}</span>
+                <span className="admin-tab-count">{totalItems}</span>
               </button>
               <button
-                className={`menu-tab-btn ${activeTab === 'combos' ? 'active' : ''}`}
+                type="button"
+                className={`admin-tab-item ${activeTab === 'combos' ? 'active' : ''}`}
                 onClick={() => setActiveTab('combos')}
               >
                 <span>Quản lý Combo</span>
-                <span className="tab-badge">{totalCombos}</span>
+                <span className="admin-tab-count">{totalCombos}</span>
               </button>
               <button
-                className={`menu-tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
+                type="button"
+                className={`admin-tab-item ${activeTab === 'categories' ? 'active' : ''}`}
                 onClick={() => setActiveTab('categories')}
               >
                 <span>Quản lý danh mục</span>
-                <span className="tab-badge">{totalCategories}</span>
+                <span className="admin-tab-count">{totalCategories}</span>
               </button>
-            </div>
-
-            {/* STATS SUMMARY CHIPS */}
-            <div className="menu-stats-row">
-              <div className="stat-chip">
-                
-                <div className="stat-chip-info">
-                  <span className="stat-chip-val">{totalItems}</span>
-                  <span className="stat-chip-label">Tổng món ({activeCount} hiển thị)</span>
-                </div>
-              </div>
-              <div className="stat-chip">
-                
-                <div className="stat-chip-info">
-                  <span className="stat-chip-val">{totalCombos}</span>
-                  <span className="stat-chip-label">Tổng Combo ({activeCombosCount} hiển thị)</span>
-                </div>
-              </div>
-              <div className="stat-chip">
-                
-                <div className="stat-chip-info">
-                  <span className="stat-chip-val">{totalCategories}</span>
-                  <span className="stat-chip-label">Danh mục món</span>
-                </div>
-              </div>
             </div>
 
             {/* TAB 1: MÓN ĂN */}
             {activeTab === 'items' && (
               <>
-                <div className="filter-bar">
-                  <div className="filter-left">
-                    <div className="search-box">
-                      
-                      <input
-                        type="text"
-                        placeholder="Tìm theo tên món ăn, nguyên liệu..."
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                      />
-                    </div>
+                <div className="admin-toolbar">
+                  {/* Status Tabs */}
+                  <div className="admin-tabs">
+                    <button
+                      type="button"
+                      className={`admin-tab-item ${!filterStatus ? 'active' : ''}`}
+                      onClick={() => setFilterStatus('')}
+                    >
+                      <span>Tất cả</span>
+                      <span className="admin-tab-count">{totalItems}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-tab-item ${filterStatus === 'ACTIVE' ? 'active' : ''}`}
+                      onClick={() => setFilterStatus('ACTIVE')}
+                    >
+                      <span>Đang phục vụ</span>
+                      <span className="admin-tab-count success">{activeCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-tab-item ${filterStatus === 'INACTIVE' ? 'active' : ''}`}
+                      onClick={() => setFilterStatus('INACTIVE')}
+                    >
+                      <span>Tạm ngưng</span>
+                      <span className="admin-tab-count">{totalItems - activeCount}</span>
+                    </button>
+                  </div>
 
+                  {/* Right: Category select, Search box, Reset */}
+                  <div className="admin-toolbar-right">
                     <select
-                      className="filter-select"
+                      className="admin-filter-select"
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
                     >
@@ -1311,36 +1325,43 @@ function MenuPage() {
                       ))}
                     </select>
 
-                    <select
-                      className="filter-select"
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                      <option value="">-- Tất cả trạng thái --</option>
-                      <option value="ACTIVE">Hiển thị</option>
-                      <option value="INACTIVE">Ẩn</option>
-                    </select>
-                  </div>
+                    <div className="admin-search-bar">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="admin-search-icon">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                      <input
+                        type="text"
+                        className="admin-search-input"
+                        placeholder="Tìm theo tên món ăn, nguyên liệu..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                      />
+                      {searchKeyword && (
+                        <button
+                          type="button"
+                          className="admin-search-clear"
+                          onClick={() => setSearchKeyword('')}
+                          title="Xóa tìm kiếm"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
 
-                  <div className="filter-right">
                     {(filterCategory || filterStatus || searchKeyword) && (
                       <button
-                        className="btn-secondary"
+                        type="button"
+                        className="admin-btn-reset"
                         onClick={() => {
                           setFilterCategory('')
                           setFilterStatus('')
                           setSearchKeyword('')
                         }}
                       >
-                        Xóa lọc
+                        ✕ Xóa lọc
                       </button>
                     )}
-                    <button className="btn-secondary" onClick={loadData} title="Làm mới">
-                      Làm mới
-                    </button>
-                    <button className="btn-primary-large" onClick={handleOpenCreateItem}>
-                      + Thêm món ăn mới
-                    </button>
                   </div>
                 </div>
 
@@ -1375,7 +1396,13 @@ function MenuPage() {
                       </thead>
                       <tbody>
                         {menuItems.map((item) => (
-                          <tr key={item.id}>
+                          <tr
+                            key={item.id}
+                            className="clickable-row"
+                            onClick={() => handleOpenEditItem(item)}
+                            style={{ cursor: 'pointer' }}
+                            title="Bấm để xem chi tiết và chỉnh sửa món ăn"
+                          >
                             <td>
                               <div className="menu-item-row-cell">
                                 <div className="item-thumb-wrapper">
@@ -1422,6 +1449,7 @@ function MenuPage() {
                               <select
                                 className={`status-select-badge ${item.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
                                 value={item.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}
+                                onClick={(e) => e.stopPropagation()}
                                 onChange={(e) =>
                                   handleQuickStatusChange(item.id, e.target.value)
                                 }
@@ -1433,7 +1461,10 @@ function MenuPage() {
                             <td style={{ textAlign: 'right' }}>
                               <button
                                 className="action-btn"
-                                onClick={() => handleOpenEditItem(item)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenEditItem(item)
+                                }}
                                 title="Sửa món ăn"
                               >
                                 Sửa
@@ -1529,7 +1560,13 @@ function MenuPage() {
                       </thead>
                       <tbody>
                         {filteredCombos.map((combo) => (
-                          <tr key={combo.id}>
+                          <tr
+                            key={combo.id}
+                            className="clickable-row"
+                            onClick={() => handleOpenEditCombo(combo)}
+                            style={{ cursor: 'pointer' }}
+                            title="Bấm để xem chi tiết và chỉnh sửa combo"
+                          >
                             <td>
                               <div className="menu-item-row-cell" style={{ alignItems: 'flex-start' }}>
                                 <div className="item-thumb-wrapper" style={{ borderColor: 'rgba(239, 108, 0, 0.2)', marginTop: 4 }}>
@@ -1598,6 +1635,7 @@ function MenuPage() {
                               <select
                                 className={`status-select-badge ${combo.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
                                 value={combo.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}
+                                onClick={(e) => e.stopPropagation()}
                                 onChange={(e) =>
                                   handleQuickComboStatusChange(combo, e.target.value)
                                 }
@@ -1609,7 +1647,10 @@ function MenuPage() {
                             <td style={{ textAlign: 'right' }}>
                               <button
                                 className="action-btn"
-                                onClick={() => handleOpenEditCombo(combo)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenEditCombo(combo)
+                                }}
                                 title="Sửa combo"
                               >
                                 Sửa
@@ -1663,7 +1704,13 @@ function MenuPage() {
                     </thead>
                     <tbody>
                       {categories.map((cat) => (
-                        <tr key={cat.id}>
+                        <tr
+                          key={cat.id}
+                          className="clickable-row"
+                          onClick={() => handleOpenEditCategory(cat)}
+                          style={{ cursor: 'pointer' }}
+                          title="Bấm để xem chi tiết và chỉnh sửa danh mục"
+                        >
                           <td>
                             <strong>#{cat.id}</strong>
                           </td>
@@ -1677,6 +1724,7 @@ function MenuPage() {
                             <select
                               className={`status-select-badge ${cat.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
                               value={cat.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE'}
+                              onClick={(e) => e.stopPropagation()}
                               onChange={(e) =>
                                 handleQuickCategoryStatusChange(cat, e.target.value)
                               }
@@ -1688,7 +1736,10 @@ function MenuPage() {
                           <td style={{ textAlign: 'right' }}>
                             <button
                               className="action-btn"
-                              onClick={() => handleOpenEditCategory(cat)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenEditCategory(cat)
+                              }}
                               title="Sửa danh mục"
                             >
                               Sửa
